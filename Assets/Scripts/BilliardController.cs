@@ -33,9 +33,15 @@ public class BilliardController : MonoBehaviour
         aimLine = GetComponent<LineRenderer>();
         mainCam = Camera.main;
 
-        // line renderer default setup 
+        rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
         aimLine.positionCount = 2;
         aimLine.enabled = false;
+        aimLine.startWidth = 0.05f;
+        aimLine.endWidth = 0.05f;
+        aimLine.material = new Material(Shader.Find("Sprites/Default"));
+        aimLine.startColor = Color.red;
+        aimLine.endColor = Color.red;
     }
     
     void Update()
@@ -62,20 +68,33 @@ public class BilliardController : MonoBehaviour
 
     private void HandleAiming()
     {
-        //raycast from camera to mouse to ground
-        Ray ray = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
-        RaycastHit hit;
+        Ray camRay = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
+        Plane playerPlane = new Plane(Vector3.forward, transform.position); // <-- XY plane!
+        float hitDistance;
 
-        if (Physics.Raycast(ray, out hit, 100f, groundLayer))
+        if (playerPlane.Raycast(camRay, out hitDistance))
         {
-            // ball to mouse hit hit point calculation.
-            Vector3 mousePos = hit.point;
+            Vector3 mouseWorldPos = camRay.GetPoint(hitDistance);
+            Vector3 direction = (mouseWorldPos - transform.position).normalized;
+            float distance = Vector3.Distance(transform.position, mouseWorldPos);
 
-            // lock Y to balls Y to ensure a flat vector is drawn.
-            mousePos.y = transform.position.y;
-
-            //Get Normalized direction.
-            aimDirection = (mousePos - transform.position).normalized;
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, direction, out hit, distance, groundLayer))
+            {
+                aimDirection = (hit.point - transform.position).normalized;
+                Debug.DrawLine(transform.position, hit.point, Color.green, 0.1f);
+            }
+            else
+            {
+                aimDirection = direction;
+                Debug.DrawLine(transform.position, mouseWorldPos, Color.magenta, 0.1f);
+            }
+            Debug.Log("Aim direction set: " + aimDirection);
+        }
+        else
+        {
+            Debug.LogWarning("Plane raycast did not hit");
+            aimDirection = Vector3.right; // fallback for XY
         }
     }
 
@@ -167,9 +186,10 @@ public class BilliardController : MonoBehaviour
 
     private void DrawAimLine(float length)
     {
-        //line starting point at the ball center
-        aimLine.SetPosition(0, transform.position);
-        //end line aim
-        aimLine.SetPosition(1, transform.position + (aimDirection * length));
+        Vector3 start = transform.position + Vector3.up * 0.05f;
+        Vector3 end = start + (aimDirection * length);
+        aimLine.SetPosition(0, start);
+        aimLine.SetPosition(1, end);
+        Debug.Log(aimDirection);    
     }
 }
