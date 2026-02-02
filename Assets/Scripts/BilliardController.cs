@@ -27,6 +27,10 @@ public class BilliardController : MonoBehaviour
     private Vector3 aimDirection;
     private bool isBallMoving;
 
+    private enum ShootState { Idle, Ready, Charging }
+    private ShootState shootState = ShootState.Idle;
+    private float currentAimLineLength;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -76,17 +80,27 @@ public class BilliardController : MonoBehaviour
         {
             Vector3 mouseWorldPos = camRay.GetPoint(hitDistance);
             Vector3 direction = (mouseWorldPos - transform.position).normalized;
-            float distance = Vector3.Distance(transform.position, mouseWorldPos);
 
             RaycastHit hit;
-            if (Physics.Raycast(transform.position, direction, out hit, distance, groundLayer))
+            if (Physics.Raycast(transform.position, direction, out hit, Mathf.Infinity, groundLayer))
             {
-                aimDirection = (hit.point - transform.position).normalized;
-                Debug.DrawLine(transform.position, hit.point, Color.green, 0.1f);
+                if (hit.collider.CompareTag("Obstacle"))
+                {
+                    aimDirection = (hit.point - transform.position).normalized;
+                    currentAimLineLength = hit.distance;
+                    Debug.DrawLine(transform.position, hit.point, Color.green, 0.1f);
+                }
+                else
+                {
+                    aimDirection = direction;
+                    currentAimLineLength = lineLength;
+                    Debug.DrawLine(transform.position, mouseWorldPos, Color.magenta, 0.1f);
+                }
             }
             else
             {
                 aimDirection = direction;
+                currentAimLineLength = lineLength;
                 Debug.DrawLine(transform.position, mouseWorldPos, Color.magenta, 0.1f);
             }
             Debug.Log("Aim direction set: " + aimDirection);
@@ -95,12 +109,13 @@ public class BilliardController : MonoBehaviour
         {
             Debug.LogWarning("Plane raycast did not hit");
             aimDirection = Vector3.right; // fallback for XY
+            currentAimLineLength = lineLength;
         }
     }
 
     private void HandleShooting()
     {
-        //start charging
+        //start charging, first left click (prepraring to shoot)
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             isCharging = true;
@@ -142,8 +157,8 @@ public class BilliardController : MonoBehaviour
             aimLine.enabled = true;
             arrowIndicator.gameObject.SetActive(true);
 
-            // default aiming visuals
-            DrawAimLine(lineLength);
+            // Use the dynamic aim line length
+            DrawAimLine(currentAimLineLength);
             RotateArrow();
 
             // reset colors
@@ -159,8 +174,9 @@ public class BilliardController : MonoBehaviour
             //calculate percentages for visuals (0 to 1)
             float powerPercent = currentPower / maxPower;
 
-            // line length grows with strength
-            DrawAimLine(lineLength * (0.5f + powerPercent));
+            // Scale the line length with power, but cap at the collision point
+            float scaledLength = Mathf.Min(currentAimLineLength, lineLength * (0.5f + powerPercent));
+            DrawAimLine(scaledLength);
             RotateArrow();
 
             //color change based on power
