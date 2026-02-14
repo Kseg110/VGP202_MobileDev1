@@ -1560,6 +1560,7 @@ MonoBehaviour:
   _obstaclesParent: {fileID: 191268363}
   _line: {fileID: 1422846349}
   _maxPhysicsFrameIterations: 1
+  _curvePreviewLine: {fileID: 0}
 --- !u!4 &1422846356 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1332006784564033225, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
@@ -1700,6 +1701,10 @@ PrefabInstance:
       propertyPath: powerBar
       value: 
       objectReference: {fileID: 1041488298}
+    - target: {fileID: 2903419006329229142, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
+      propertyPath: trajectoryProjection
+      value: 
+      objectReference: {fileID: 1422846350}
     - target: {fileID: 2903419006329229142, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
       propertyPath: stopVelocityThreshold
       value: 0.5
