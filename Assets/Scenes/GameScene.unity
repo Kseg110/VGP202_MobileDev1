@@ -1704,6 +1704,14 @@ PrefabInstance:
       propertyPath: stopVelocityThreshold
       value: 0.5
       objectReference: {fileID: 0}
+    - target: {fileID: 2903419006329229142, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
+      propertyPath: aimingSystem.lineLength
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 2903419006329229142, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
+      propertyPath: aimingSystem.groundLayer.m_Bits
+      value: 4294967295
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
