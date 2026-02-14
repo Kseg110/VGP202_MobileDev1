@@ -139,10 +139,23 @@ public class BilliardController : MonoBehaviour
         }
     }   
     
-    private void Shoot()
+    public void Shoot()
     {
-        // Immediate force impulse.
-        rb.AddForce(aimDirection * currentPower, ForceMode.Impulse);
+        // Use the existing aimDirection and currentPower for mouse input
+        Vector3 force = aimDirection * currentPower;
+        rb.AddForce(force, ForceMode.Impulse);
+
+        // Hide visuals - vector after shooting.
+        aimLine.enabled = false;
+        arrowIndicator.gameObject.SetActive(false);
+    }
+
+    // Fix the Vector2 velocity overload
+    public void Shoot(Vector2 velocity)
+    {
+        // Convert Vector2 to Vector3 properly
+        Vector3 force = new Vector3(velocity.x, 0, velocity.y);
+        rb.AddForce(force, ForceMode.Impulse);
 
         // Hide visuals - vector after shooting.
         aimLine.enabled = false;
