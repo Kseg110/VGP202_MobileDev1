@@ -1,6 +1,7 @@
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(LineRenderer))]
@@ -12,11 +13,17 @@ public class BilliardController : MonoBehaviour
     [SerializeField] private float stopVelocityThreshold = 0.1f;
     [SerializeField] private LayerMask groundLayer;
 
+    [Header("Physics Materials")]
+    [SerializeField] private PhysicsMaterial ballPhysicsMaterial;
+
     [Header("Visuals")]
-    [SerializeField] private Transform arrowIndicator; // assign - input arrow child in inspector
+    [SerializeField] private Transform arrowIndicator; 
     [SerializeField] private float lineLength = 2.0f;
     [SerializeField] private Color minPowerColor = Color.white;
     [SerializeField] private Color maxPowerColor = Color.red;
+
+    [Header("UI")]
+    [SerializeField] private RadialPowerBar powerBar; 
 
     private Rigidbody rb;
     private LineRenderer aimLine;
@@ -31,13 +38,24 @@ public class BilliardController : MonoBehaviour
     private ShootState shootState = ShootState.Idle;
     private float currentAimLineLength;
 
+    public float PowerPercentage => currentPower / maxPower;
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         aimLine = GetComponent<LineRenderer>();
         mainCam = Camera.main;
 
-        rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        // DISABLE GRAVITY 
+        rb.useGravity = false;
+
+        // Add drag for friction simulation
+        rb.linearDamping = 1f; // Linear damping
+        rb.angularDamping = 2f; // Angular damping
+        
+        rb.constraints = RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY;
+
+        // Apply physics material
+        ApplyPhysicsMaterial();
 
         aimLine.positionCount = 2;
         aimLine.enabled = false;
@@ -66,14 +84,28 @@ public class BilliardController : MonoBehaviour
 
     private void CheckMovement()
     {
-        // check to see if ball is stopped.
-        isBallMoving = rb.angularVelocity.magnitude > stopVelocityThreshold;
+        // Check both linear and angular velocity - this was the main issue!
+        bool isLinearVelocityLow = rb.linearVelocity.magnitude <= stopVelocityThreshold;
+        bool isAngularVelocityLow = rb.angularVelocity.magnitude <= stopVelocityThreshold;
+        
+        // Ball is considered stopped when BOTH velocities are below threshold
+        if (isLinearVelocityLow && isAngularVelocityLow)
+        {
+            // Force complete stop to prevent infinite sliding
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            isBallMoving = false;
+        }
+        else
+        {
+            isBallMoving = true;
+        }
     }
 
     private void HandleAiming()
     {
         Ray camRay = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
-        Plane playerPlane = new Plane(Vector3.forward, transform.position); // <-- XY plane!
+        Plane playerPlane = new Plane(Vector3.forward, transform.position); // <-- XY plane
         float hitDistance;
 
         if (playerPlane.Raycast(camRay, out hitDistance))
@@ -103,39 +135,50 @@ public class BilliardController : MonoBehaviour
                 currentAimLineLength = lineLength;
                 Debug.DrawLine(transform.position, mouseWorldPos, Color.magenta, 0.1f);
             }
+            
+            aimDirection.z = 0f;
+            aimDirection = aimDirection.normalized;
+            
             Debug.Log("Aim direction set: " + aimDirection);
         }
         else
         {
             Debug.LogWarning("Plane raycast did not hit");
-            aimDirection = Vector3.right; // fallback for XY
+            aimDirection = Vector3.right; // fallback
             currentAimLineLength = lineLength;
         }
     }
 
     private void HandleShooting()
     {
-        //start charging, first left click (prepraring to shoot)
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        if (Mouse.current.leftButton.wasPressedThisFrame && !isCharging)
         {
             isCharging = true;
             currentPower = 0f;
+            shootState = ShootState.Charging; // This is good
+            
+            if (powerBar != null) powerBar.SetActive(true);
         }
 
-        // charging up
+        // charging up / increasing power / velocity
         if(Mouse.current.leftButton.isPressed && isCharging)
         {
             //increase power over time, stops at max power
             currentPower += chargeSpeed * Time.deltaTime;
             currentPower = Mathf.Clamp(currentPower, 0, maxPower);
+
+            //update radial power bar 
+            if (powerBar != null) powerBar.UpdatePower(PowerPercentage);
         }
 
-        // fire
-        if (Mouse.current.leftButton.wasPressedThisFrame && isCharging)
+        //shoot on button release - FIXED: changed from wasPressedThisFrame to wasReleasedThisFrame
+        if (Mouse.current.leftButton.wasReleasedThisFrame && isCharging)
         {
             Shoot();
             isCharging = false;
-
+            shootState = ShootState.Idle; // This is good
+            
+            if (powerBar != null) powerBar.SetActive(false);
         }
     }   
     
@@ -148,13 +191,15 @@ public class BilliardController : MonoBehaviour
         // Hide visuals - vector after shooting.
         aimLine.enabled = false;
         arrowIndicator.gameObject.SetActive(false);
+
+        //Reset power
+        currentPower = 0f;
     }
 
     // Fix the Vector2 velocity overload
     public void Shoot(Vector2 velocity)
     {
-        // Convert Vector2 to Vector3 properly
-        Vector3 force = new Vector3(velocity.x, 0, velocity.y);
+        Vector3 force = new Vector3(velocity.x, velocity.y, 0);
         rb.AddForce(force, ForceMode.Impulse);
 
         // Hide visuals - vector after shooting.
@@ -220,5 +265,26 @@ public class BilliardController : MonoBehaviour
         aimLine.SetPosition(0, start);
         aimLine.SetPosition(1, end);
         Debug.Log(aimDirection);    
+    }
+
+    private void ApplyPhysicsMaterial()
+    {
+        // Create the same material as in Projection script if not assigned
+        if (ballPhysicsMaterial == null)
+        {
+            ballPhysicsMaterial = new PhysicsMaterial("BallMaterial");
+            ballPhysicsMaterial.bounciness = 0.8f;
+            ballPhysicsMaterial.dynamicFriction = 0.1f;
+            ballPhysicsMaterial.staticFriction = 0.1f;
+            ballPhysicsMaterial.frictionCombine = PhysicsMaterialCombine.Minimum;
+            ballPhysicsMaterial.bounceCombine = PhysicsMaterialCombine.Maximum;
+        }
+
+        // Apply to the ball's collider
+        Collider ballCollider = GetComponent<Collider>();
+        if (ballCollider != null)
+        {
+            ballCollider.material = ballPhysicsMaterial;
+        }
     }
 }
