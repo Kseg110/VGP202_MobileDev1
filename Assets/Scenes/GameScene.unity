@@ -1566,6 +1566,23 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1332006784564033225, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
   m_PrefabInstance: {fileID: 1164584677554542309}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1422846362
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1422846342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecd14030cfaa1a40834145c08b69e7d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BilliardBall
+  curveStrength: 5
+  spinDecayRate: 2
+  stopVelocityThreshold: 0.1
+  debugCurrentSideSpin: 0
+  currentSideSpin: 1
 --- !u!1 &1882348776
 GameObject:
   m_ObjectHideFlags: 0
@@ -1727,6 +1744,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 690765546428489236, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1422846350}
+    - targetCorrespondingSourceObject: {fileID: 690765546428489236, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1422846362}
   m_SourcePrefab: {fileID: 100100000, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
 --- !u!1001 &5903598427015587125
 PrefabInstance:

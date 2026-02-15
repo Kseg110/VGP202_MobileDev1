@@ -5,8 +5,8 @@ public class RigidbodyConfig
 {
     [Header("Physics Settings")]
     public bool useGravity = false;
-    public float linearDamping = 1f;
-    public float angularDamping = 2f;
+    public float linearDamping = 1f; // Back to original
+    public float angularDamping = 2f; // Back to original
     public RigidbodyConstraints constraints = RigidbodyConstraints.FreezePositionZ | 
                                             RigidbodyConstraints.FreezeRotationX | 
                                             RigidbodyConstraints.FreezeRotationY;

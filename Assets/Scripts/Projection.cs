@@ -118,11 +118,11 @@ public class Projection : PhysicsMaterialManager
 
         SceneManager.MoveGameObjectToScene(ghostObj.gameObject, _simulationScene);
         
-        // Apply curved force to the ghost ball
-        BallMovement ghostBallMovement = ghostObj.GetComponent<BallMovement>();
-        if (ghostBallMovement != null)
+        // Apply curved force to the ghost ball using new system
+        BilliardBall ghostBilliardBall = ghostObj.GetComponent<BilliardBall>(); // Changed from BallMovement
+        if (ghostBilliardBall != null)
         {
-            ghostBallMovement.ApplyForceWithCurve(curvedVelocity, curveIntensity);
+            ghostBilliardBall.ApplyForceWithCurve(curvedVelocity, curveIntensity);
         }
         else
         {

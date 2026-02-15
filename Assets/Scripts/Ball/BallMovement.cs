@@ -4,9 +4,12 @@ using UnityEngine;
 public class BallMovement
 {
     [SerializeField] private float stopVelocityThreshold = 0.1f;
+    [SerializeField] private float curvePullForce = 5.0f; // Increased from 2.0f
     
     private Rigidbody rb;
-    private MonoBehaviour owner; // Reference to the owning MonoBehaviour
+    private MonoBehaviour owner;
+    private Vector3 pullDirection;
+    private float pullIntensity;
 
     public void Initialize(Rigidbody rigidbody, MonoBehaviour ownerMonoBehaviour = null)
     {
@@ -37,45 +40,69 @@ public class BallMovement
 
     public void ApplyForceWithCurve(Vector3 baseForce, float curveIntensity)
     {
-        // Apply the base force first
+        // Apply the original straight force first
         rb.AddForce(baseForce, ForceMode.Impulse);
         
-        Debug.Log($"Applied curved shot: BaseForce={baseForce}, CurveIntensity={curveIntensity}");
+        Debug.Log($"CURVE SHOT - BaseForce: {baseForce}, CurveIntensity: {curveIntensity}");
         
-        // Start continuous curve force application if owner is available
+        // Set up the pulling force for the curve effect
         if (owner != null && Mathf.Abs(curveIntensity) > 0.1f)
         {
-            owner.StartCoroutine(ApplyContinuousCurve(curveIntensity));
+            // Calculate the pull direction based on curve intensity
+            Vector3 perpendicularToMovement = Vector3.Cross(baseForce.normalized, Vector3.forward).normalized;
+            
+            // For right curve (positive intensity), we want to pull left
+            // For left curve (negative intensity), we want to pull right
+            pullDirection = perpendicularToMovement * Mathf.Sign(curveIntensity);
+            pullIntensity = Mathf.Abs(curveIntensity);
+            
+            Debug.Log($"CURVE SETUP - Pull Direction: {pullDirection}, Pull Intensity: {pullIntensity}");
+            
+            owner.StartCoroutine(ApplyProjectileCurve());
+        }
+        else
+        {
+            Debug.Log("NO CURVE - Intensity too low or owner null");
         }
     }
 
-    private System.Collections.IEnumerator ApplyContinuousCurve(float initialCurveIntensity)
+    private System.Collections.IEnumerator ApplyProjectileCurve()
     {
-        float currentCurveIntensity = initialCurveIntensity;
         float timeElapsed = 0f;
-        float curveDuration = 1.5f; // How long the curve effect lasts
+        float maxCurveDuration = 1.5f; // Reduced duration for more intense effect
+        float currentPullIntensity = pullIntensity;
+        
+        Debug.Log("STARTING PROJECTILE CURVE");
         
         while (rb.linearVelocity.magnitude > stopVelocityThreshold && 
-               Mathf.Abs(currentCurveIntensity) > 0.1f && 
-               timeElapsed < curveDuration)
+               timeElapsed < maxCurveDuration && 
+               currentPullIntensity > 0.1f)
         {
-            // Calculate perpendicular force based on current velocity (in XY plane)
-            Vector3 velocity = rb.linearVelocity;
-            Vector3 perpendicularDirection = Vector3.Cross(velocity.normalized, Vector3.forward).normalized;
+            // Calculate the current pull force
+            float velocityFactor = rb.linearVelocity.magnitude / 15f; // Increased divisor for stronger effect
+            float timeFactor = 1f - (timeElapsed / maxCurveDuration); // Decay over time
             
-            // Apply continuous curve force (Magnus effect)
-            float curveForce = currentCurveIntensity * velocity.magnitude * 0.08f; // Adjusted multiplier
-            Vector3 curveVector = perpendicularDirection * curveForce;
+            // Apply the pulling force
+            Vector3 pullForceVector = pullDirection * currentPullIntensity * curvePullForce * velocityFactor * timeFactor;
+            rb.AddForce(pullForceVector, ForceMode.Force);
             
-            rb.AddForce(curveVector, ForceMode.Force);
+            // Enhanced debug visualization
+            Debug.DrawRay(rb.position, pullForceVector * 5f, Color.red, 0.1f);
+            Debug.DrawRay(rb.position, rb.linearVelocity.normalized * 3f, Color.blue, 0.1f);
             
-            // Gradually reduce curve intensity over time
-            currentCurveIntensity *= 0.95f; // Slower decay for more pronounced curve
+            // Log force values occasionally
+            if (Time.fixedTime % 0.2f < Time.fixedDeltaTime)
+            {
+                Debug.Log($"CURVE FORCE: {pullForceVector.magnitude:F2}, Velocity: {rb.linearVelocity.magnitude:F2}");
+            }
+            
+            // Gradually reduce the pull intensity
+            currentPullIntensity *= 0.96f; // Slower decay for longer effect
             timeElapsed += Time.fixedDeltaTime;
             
             yield return new WaitForFixedUpdate();
         }
         
-        Debug.Log("Curve force application ended");
+        Debug.Log("PROJECTILE CURVE ENDED");
     }
 }

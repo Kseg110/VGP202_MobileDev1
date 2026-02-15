@@ -10,8 +10,8 @@ public class BilliardController : PhysicsMaterialManager
     [SerializeField] private float chargeSpeed = 10f;
 
     [Header("Components")]
-    [SerializeField] private BallMovement ballMovement;
-    [SerializeField] private AimingSystem aimingSystem;
+    [SerializeField] private BilliardBall billiardBall; // Changed from BallMovement
+    public AimingSystem aimingSystem; 
     [SerializeField] private RigidbodyConfig rigidbodyConfig;
     [SerializeField] private Projection trajectoryProjection;
 
@@ -43,8 +43,21 @@ public class BilliardController : PhysicsMaterialManager
 
         RigidbodyConfigurator.ConfigureRigidbody(rb, rigidbodyConfig);
         
-        // Initialize with this MonoBehaviour as owner for coroutines
-        ballMovement.Initialize(rb, this);
+        // Safety check for billiardBall component
+        if (billiardBall == null)
+        {
+            billiardBall = GetComponent<BilliardBall>();
+            
+            // If still null, add the component
+            if (billiardBall == null)
+            {
+                Debug.LogWarning("BilliardBall component not found. Adding it automatically.");
+                billiardBall = gameObject.AddComponent<BilliardBall>();
+            }
+        }
+        
+        // Initialize with this MonoBehaviour as owner for compatibility
+        billiardBall.Initialize(rb, this);
         aimingSystem.Initialize(mainCam, transform);
         
         SetupLineRenderer();
@@ -58,7 +71,7 @@ public class BilliardController : PhysicsMaterialManager
     
     void Update()
     {
-        bool isBallMoving = ballMovement.IsBallMoving();
+        bool isBallMoving = billiardBall.IsBallMoving(); // Changed from ballMovement
 
         if (isBallMoving)
         {
@@ -115,14 +128,14 @@ public class BilliardController : PhysicsMaterialManager
         
         Debug.Log($"Shooting - Curve Active: {aimingSystem.IsCurveShotActive}, Intensity: {aimingSystem.CurveIntensity}");
         
-        // Use the enhanced ball movement with curve
+        // Use the enhanced billiard ball with curve
         if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
         {
-            ballMovement.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity);
+            billiardBall.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity); // Changed from ballMovement
         }
         else
         {
-            ballMovement.ApplyForce(baseForce);
+            billiardBall.ApplyForce(baseForce); // Changed from ballMovement
         }
 
         aimLine.enabled = false;
@@ -134,7 +147,7 @@ public class BilliardController : PhysicsMaterialManager
     public void Shoot(Vector2 velocity)
     {
         Vector3 force = new Vector3(velocity.x, velocity.y, 0);
-        ballMovement.ApplyForce(force);
+        billiardBall.ApplyForce(force); // Changed from ballMovement
 
         aimLine.enabled = false;
         arrowIndicator.gameObject.SetActive(false);
