@@ -68,8 +68,8 @@ public class BallMovement
 
     private System.Collections.IEnumerator ApplyProjectileCurve()
     {
-        float timeElapsed = 0f;
-        float maxCurveDuration = 1.5f; // Reduced duration for more intense effect
+        float timeElapsed = 5f;
+        float maxCurveDuration = 1f; // Reduced duration for more intense effect
         float currentPullIntensity = pullIntensity;
         
         Debug.Log("STARTING PROJECTILE CURVE");
@@ -79,7 +79,7 @@ public class BallMovement
                currentPullIntensity > 0.1f)
         {
             // Calculate the current pull force
-            float velocityFactor = rb.linearVelocity.magnitude / 15f; // Increased divisor for stronger effect
+            float velocityFactor = rb.linearVelocity.magnitude / 10f; // Increased divisor for stronger effect
             float timeFactor = 1f - (timeElapsed / maxCurveDuration); // Decay over time
             
             // Apply the pulling force
