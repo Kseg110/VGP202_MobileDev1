@@ -39,9 +39,15 @@ public class InputManager : MonoBehaviour
         //tilt input
         input.Gameplay.Accelerometer.performed += ctx => OnPhoneTilt?.Invoke(ctx.ReadValue<Vector3>());
     }
+    
     private void OnDisable()
     {
         input.Disable();
+    }
+
+    private void OnDestroy()
+    {
+        input?.Dispose();
     }
 
     public Vector2 GetTouchScreenPosition()
@@ -59,5 +65,34 @@ public class InputManager : MonoBehaviour
         Vector2 screenPos = GetTouchScreenPosition();
         Vector3 worldPos = cameraToUse.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, cameraToUse.nearClipPlane));
         return worldPos;
+    }
+
+    public Vector2 GetTouchDirection(Vector2 startPos, Vector2 currentPos)
+    {
+        return (currentPos - startPos).normalized;
+    }
+
+    public float GetTouchDistance(Vector2 startPos, Vector2 currentPos)
+    {
+        return Vector2.Distance(startPos, currentPos);
+    }
+
+    // For billiards aiming
+    public Vector3 GetAimDirection(Camera camera)
+    {
+        Vector2 screenPos = GetTouchScreenPosition();
+        Vector3 worldPos = GetTouchWorldPosition(camera);
+        return worldPos;
+    }
+
+    // Utility methods for billiards gameplay
+    public bool IsTouching()
+    {
+        return input.Gameplay.Touch.ReadValue<float>() > 0;
+    }
+
+    public Vector2 GetTouchDelta(Vector2 lastPosition)
+    {
+        return GetTouchScreenPosition() - lastPosition;
     }
 }

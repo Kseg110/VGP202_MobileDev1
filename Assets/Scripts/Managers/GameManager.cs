@@ -6,6 +6,7 @@ using System;
 using UnityEngine.Events;
 using UnityEditor;
 using UnityEngine.Audio;
+using UnityEngine.InputSystem;
 
 [DefaultExecutionOrder(-10)]
 public class GameManager : MonoBehaviour
@@ -24,11 +25,10 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region UI References
-    public GameObject gameOverCanvasPrefab; // Drag your Game Over UI Canvas prefab here in the Inspector
+    public GameObject gameOverCanvasPrefab;
     private GameObject gameOverCanvasInstance;
     #endregion
 
-    //public AudioClip scorePickup;
     private AudioSource audioSource;
 
     public event Action<int> OnLivesChanged;
@@ -37,28 +37,11 @@ public class GameManager : MonoBehaviour
     #region Stats
     public int maxLives = 7;
     private int _lives = 7;
-
-    //private int _coins = 4;
-
     private int _shots = 10;
     private protected int _maxShots = 10;
- 
     private protected int _rounds = 0;
     private bool winCheck = false;
 
-   /* public int coins
-    {
-        get => _coins;
-        set
-        {
-            if (value < 0)
-                _coins = 0;
-            else
-                _coins = value;
-            Debug.Log($"Coins: {_coins}");
-            OnCoinsChanged?.Invoke(_coins);
-        }
-    } */
     public int lives
     {
         get => _lives;
@@ -66,16 +49,13 @@ public class GameManager : MonoBehaviour
         {
             if (value <= 0)
             {
-                //gameover
                 Debug.Log("Game Over!");
                 GameOver();
                 _lives = 0;
             }
             else if (value < _lives)
             {
-                //play hurt sound
                 Debug.Log("Ouch! You lost a life");
-
                 _lives = value;
             }
             else if (value > maxLives)
@@ -94,22 +74,14 @@ public class GameManager : MonoBehaviour
     public int shots
     {
         get => _shots;
-        set
-        {
-            _shots = value;
-        }
+        set => _shots = value;
     }
 
     public int rounds
     {
         get => _rounds;
-        set
-        {
-            _rounds = value;
-        }
+        set => _rounds = value;
     }
-
-    
     #endregion
 
     #region Singleton Pattern
@@ -129,7 +101,6 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
 
@@ -137,66 +108,108 @@ public class GameManager : MonoBehaviour
 
     private void OnEnable()
     {
-        //SceneManager.activeSceneChanged += SceneChanged;
+        // Subscribe to mobile input events
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnTouchBegin += HandleTouchInput;
+            InputManager.Instance.OnTouchEnd += HandleTouchRelease;
+            InputManager.Instance.OnPhoneTilt += HandlePhoneTilt;
+        }
     }
 
     private void OnDisable()
     {
-        //SceneManager.activeSceneChanged -= SceneChanged;
+        // Unsubscribe from mobile input events
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnTouchBegin -= HandleTouchInput;
+            InputManager.Instance.OnTouchEnd -= HandleTouchRelease;
+            InputManager.Instance.OnPhoneTilt -= HandlePhoneTilt;
+        }
     }
 
-
-    void GameOver()
+    #region Mobile Input Handlers
+    private void HandleTouchInput()
     {
-        SceneManager.LoadScene(0);
+        // Handle touch began - could be used for game mechanics
+        Debug.Log("Touch detected");
     }
 
-   /* void Respawn()
+    private void HandleTouchRelease()
     {
-        _playerInstance.transform.position = SaveManager.LoadPosition();
+        // Handle touch release - could be used for game mechanics
+        Debug.Log("Touch released");
     }
 
-    public void RespawnPlayerAt(Vector3 position)
-{
-    if (_playerInstance != null)
+    private void HandlePhoneTilt(Vector3 tiltData)
     {
-        Destroy(_playerInstance.gameObject);
+        // Handle phone tilt - could be used for game mechanics
+        // This is great for mobile billiards games!
     }
-    _playerInstance = Instantiate(playerPrefab, position, Quaternion.identity);
-    OnPlayerControllerCreated?.Invoke(_playerInstance);
-    Debug.Log("GameManager: Player respawned at checkpoint.");
-} */
-
+    #endregion
 
     private bool isPaused = false;
-    // Update is called once per frame
+
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (SceneManager.GetActiveScene().buildIndex == 0)
-            {
-                SceneManager.LoadScene(1);
-            }
-            else
-            {
-                // Unlock and show cursor before returning to menu
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-                SceneManager.LoadScene(0);
-            }
-        }
-
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            lives--; // set to subtract lives for testing
-        }
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            TogglePause();
-        }
+        // Keep only essential Update logic
+        // For mobile, you might want to handle back button presses instead of Escape
+        HandleMobileBackButton();
 
         // Ensure there is always one AudioListener in the scene
+        EnsureAudioListener();
+
+        // Handle debug keys only in editor/development builds
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        HandleDebugKeys();
+        #endif
+    }
+
+    private void HandleMobileBackButton()
+    {
+        // Handle Android back button or iOS equivalent
+        if (Application.platform == RuntimePlatform.Android)
+        {
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Escape))
+            {
+                HandleBackButton();
+            }
+        }
+    }
+
+    private void HandleBackButton()
+    {
+        if (SceneManager.GetActiveScene().buildIndex == 0)
+        {
+            // On main menu, quit application or minimize
+            Application.Quit();
+        }
+        else
+        {
+            // In game, return to menu
+            SceneManager.LoadScene(0);
+        }
+    }
+
+    private void HandleDebugKeys()
+    {
+        // Debug keys only for development
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.rKey.wasPressedThisFrame)
+            {
+                lives--; // Debug life loss
+            }
+            
+            if (Keyboard.current.pKey.wasPressedThisFrame)
+            {
+                TogglePause();
+            }
+        }
+    }
+
+    private void EnsureAudioListener()
+    {
         if (FindObjectsByType<AudioListener>(FindObjectsSortMode.None).Length == 0)
         {
             if (Camera.main != null && Camera.main.GetComponent<AudioListener>() == null)
@@ -211,10 +224,16 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+
     private void TogglePause()
     {
         isPaused = !isPaused;
         Time.timeScale = isPaused ? 0f : 1f;
+    }
+
+    private void GameOver()
+    {
+        SceneManager.LoadScene(0);
     }
 
     public Transform spawnPoint; 
@@ -225,58 +244,6 @@ public class GameManager : MonoBehaviour
         Debug.Log($"SetLoadFromCheckpoint called with value: {value}");
     }
 
-    #region save logic
-    /* void OnApplicationQuit()
-    {
-        if (_playerInstance != null)
-        {
-            string weaponPrefabName = _playerInstance.CurWeapon ? _playerInstance.CurWeapon.GetType().Name : "";
-            SaveManager.SavePlayer(
-                _playerInstance.transform.position,
-                _playerInstance.GetHealth(),
-                _playerInstance.GetScore(),
-                weaponPrefabName
-            );
-            Debug.Log($"GameManager: Saved weapon prefab name on Quit: {weaponPrefabName}");
-        }
-    }
-
-    void OnApplicationPause(bool pause)
-    {
-        if (pause && _playerInstance != null)
-        {
-            string weaponPrefabName = _playerInstance.CurWeapon ? _playerInstance.CurWeapon.GetType().Name : "";
-            SaveManager.SavePlayer(
-                _playerInstance.transform.position,
-                _playerInstance.GetHealth(),
-                _playerInstance.GetScore()
-            );
-        }
-    }
-    public void StartLevel(Vector3 startPosition, bool loadFromSave)
-    {
-        _playerInstance = Instantiate(playerPrefab, startPosition, Quaternion.identity);
-        Debug.Log("GameManager: Player instantiated.");
-        OnPlayerControllerCreated?.Invoke(_playerInstance);
-        Debug.Log("GameManager: OnPlayerControllerCreated event fired.");
-
-        if (loadFromSave)
-        {
-            // Load persistent data
-            _playerInstance.SetHealth(SaveManager.LoadHealth());
-            _playerInstance.SetScore(SaveManager.LoadScore());
-            _playerInstance.EquipWeaponByName(SaveManager.LoadWeapon());
-        }
-        else
-        {
-            // Overwrite save only on new game
-            _playerInstance.SetHealth(maxLives);
-            _playerInstance.SetScore(0);
-            SaveManager.SavePlayer(startPosition, maxLives, 0, "");
-        }
-    } */
-
-    #endregion
     public void WinGame()
     {
         winCheck = true;
@@ -289,12 +256,8 @@ public class GameManager : MonoBehaviour
     {
         if (scene.name == "Menu")
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-
             GameObject mainMenu = GameObject.Find("Menu");
 
-            // Find EndScene even if it's inactive
             GameObject endScene = null;
             foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
             {
