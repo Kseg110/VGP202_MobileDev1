@@ -8,16 +8,25 @@ public class AimingSystem
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private float lineLength = 2.0f;
     
+    [Header("Touch Aiming Settings")]
+    [SerializeField] private float touchSensitivity = 1.0f;
+    [SerializeField] private float minTouchDistance = 0.1f; // Minimum distance for touch drag
+    
     [Header("Curve Shot Settings")]
     [SerializeField] private float maxCurveIntensity = 3.0f;
     [SerializeField] private Key curveModifierKey = Key.LeftShift;
     [SerializeField] private Key leftCurveKey = Key.A;
     [SerializeField] private Key rightCurveKey = Key.D;
     [SerializeField] private float curveInputSensitivity = 1.0f;
-    [SerializeField] private float maxCurveAngle = 30f; // Changed to 30 degrees as requested
+    [SerializeField] private float maxCurveAngle = 30f;
     
     private Camera mainCam;
     private Transform ballTransform;
+    
+    // Touch input tracking
+    private Vector2 touchStartPosition;
+    private Vector2 currentTouchPosition;
+    private bool isDragging;
     
     public Vector3 AimDirection { get; private set; }
     public float CurrentAimLineLength { get; private set; } = 1.0f;     
@@ -32,45 +41,114 @@ public class AimingSystem
 
     public void UpdateAiming()
     {
-        Ray camRay = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
-        Plane playerPlane = new Plane(Vector3.forward, ballTransform.position);
-        
-        if (playerPlane.Raycast(camRay, out float hitDistance))
+        // Handle both touch and mouse input for flexibility
+        if (InputManager.Instance != null && InputManager.Instance.IsTouching())
         {
-            Vector3 mouseWorldPos = camRay.GetPoint(hitDistance);
-            Vector3 direction = (mouseWorldPos - ballTransform.position).normalized;
-            
-            // Ensure direction is normalized and on the correct plane
-            direction = new Vector3(direction.x, direction.y, 0f).normalized;
-
-            // Update curve input based on key combinations
-            UpdateCurveInput();
-
-            // Raycast from ball position in the aim direction to detect obstacles
-            if (Physics.Raycast(ballTransform.position, direction, out RaycastHit hit, lineLength, groundLayer))
-            {
-                AimDirection = direction;
-                CurrentAimLineLength = hit.distance;
-                Debug.DrawLine(ballTransform.position, hit.point, Color.red, 0.1f);
-            }
-            else
-            {
-                AimDirection = direction;
-                CurrentAimLineLength = lineLength;
-                Debug.DrawLine(ballTransform.position, ballTransform.position + (direction * lineLength), Color.green, 0.1f);
-            }
+            UpdateTouchAiming();
         }
         else
         {
-            Debug.LogWarning("Plane raycast did not hit");
-            AimDirection = Vector3.right;
-            CurrentAimLineLength = lineLength;
+            UpdateMouseAiming(); // Fallback for editor/desktop testing
         }
+
+        // Update curve input (keep keyboard controls for curve shots)
+        UpdateCurveInput();
+        
+        // Update aim line length with raycast
+        UpdateAimLineLength();
+    }
+    
+    private void UpdateTouchAiming()
+    {
+        Vector2 screenPosition = InputManager.Instance.GetTouchScreenPosition();
+        
+        if (!isDragging)
+        {
+            // Start tracking touch
+            touchStartPosition = screenPosition;
+            isDragging = true;
+        }
+        
+        currentTouchPosition = screenPosition;
+        
+        // Calculate direction based on touch drag
+        Vector2 dragVector = currentTouchPosition - touchStartPosition;
+        
+        if (dragVector.magnitude > minTouchDistance)
+        {
+            // Convert screen space drag to world space direction
+            Vector3 ballScreenPos = mainCam.WorldToScreenPoint(ballTransform.position);
+            Vector2 ballScreenPos2D = new Vector2(ballScreenPos.x, ballScreenPos.y);
+            
+            // Calculate aim direction from ball position to touch position
+            Vector2 aimScreenDirection = currentTouchPosition - ballScreenPos2D;
+            
+            // Convert to world space direction
+            Vector3 worldDirection = ConvertScreenToWorldDirection(aimScreenDirection);
+            
+            if (worldDirection != Vector3.zero)
+            {
+                AimDirection = worldDirection.normalized;
+            }
+        }
+    }
+    
+    private void UpdateMouseAiming()
+    {
+        // Original mouse-based aiming (for desktop testing)
+        if (Mouse.current != null)
+        {
+            Ray camRay = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            Plane playerPlane = new Plane(Vector3.forward, ballTransform.position);
+            
+            if (playerPlane.Raycast(camRay, out float hitDistance))
+            {
+                Vector3 mouseWorldPos = camRay.GetPoint(hitDistance);
+                Vector3 direction = (mouseWorldPos - ballTransform.position).normalized;
+                direction = new Vector3(direction.x, direction.y, 0f).normalized;
+                
+                if (direction != Vector3.zero)
+                {
+                    AimDirection = direction;
+                }
+            }
+        }
+    }
+    
+    private Vector3 ConvertScreenToWorldDirection(Vector2 screenDirection)
+    {
+        // Create a more robust screen-to-world conversion for aiming
+        Vector3 ballScreenPos = mainCam.WorldToScreenPoint(ballTransform.position);
+        Vector3 targetScreenPos = new Vector3(
+            ballScreenPos.x + screenDirection.x, 
+            ballScreenPos.y + screenDirection.y, 
+            ballScreenPos.z
+        );
+        
+        Vector3 targetWorldPos = mainCam.ScreenToWorldPoint(targetScreenPos);
+        Vector3 worldDirection = (targetWorldPos - ballTransform.position);
+        
+        // Ensure direction is on the XY plane (for 2D billiards)
+        worldDirection.z = 0f;
+        
+        return worldDirection;
+    }
+    
+    public void OnTouchEnd()
+    {
+        isDragging = false;
     }
 
     private void UpdateCurveInput()
     {
-        // Check if curve modifier key is held
+        // Keep keyboard controls for curve shots (can be adapted to UI buttons later)
+        if (Keyboard.current == null) 
+        {
+            IsCurveShotActive = false;
+            CurveIntensity = 0f;
+            return;
+        }
+        
         bool curveModifierPressed = Keyboard.current[curveModifierKey].isPressed;
         
         if (!curveModifierPressed)
@@ -80,7 +158,6 @@ public class AimingSystem
             return;
         }
 
-        // Check for left and right curve keys
         bool leftCurvePressed = Keyboard.current[leftCurveKey].isPressed;
         bool rightCurvePressed = Keyboard.current[rightCurveKey].isPressed;
 
@@ -88,29 +165,43 @@ public class AimingSystem
         {
             IsCurveShotActive = true;
             
-            // Calculate curve intensity based on key pressed
             if (leftCurvePressed && !rightCurvePressed)
             {
-                // Left curve (negative intensity)
                 CurveIntensity = -maxCurveIntensity;
-                Debug.Log("Left curve active: " + CurveIntensity);
             }
             else if (rightCurvePressed && !leftCurvePressed)
             {
-                // Right curve (positive intensity)
                 CurveIntensity = maxCurveIntensity;
-                Debug.Log("Right curve active: " + CurveIntensity);
             }
             else
             {
-                // Both keys pressed - no curve
                 CurveIntensity = 0f;
             }
         }
         else
         {
-            IsCurveShotActive = true; // Modifier is held but no direction keys
+            IsCurveShotActive = true;
             CurveIntensity = 0f;
+        }
+    }
+    
+    private void UpdateAimLineLength()
+    {
+        if (AimDirection == Vector3.zero)
+        {
+            AimDirection = Vector3.right; // Default direction
+            CurrentAimLineLength = lineLength;
+            return;
+        }
+        
+        // Raycast to detect obstacles
+        if (Physics.Raycast(ballTransform.position, AimDirection, out RaycastHit hit, lineLength, groundLayer))
+        {
+            CurrentAimLineLength = hit.distance;
+        }
+        else
+        {
+            CurrentAimLineLength = lineLength;
         }
     }
 
@@ -118,22 +209,14 @@ public class AimingSystem
     {
         if (!IsCurveShotActive || Mathf.Abs(CurveIntensity) < 0.1f)
         {
-            Debug.Log("No curve applied - returning base velocity: " + baseVelocity);
             return baseVelocity;
         }
 
-        // Calculate the perpendicular direction for curve (Magnus effect) in XY plane
         Vector3 perpendicularDirection = Vector3.Cross(baseVelocity.normalized, Vector3.forward).normalized;
-        
-        // Apply curve force as initial sideways velocity (reduced for more realistic curve)
-        float curveForce = CurveIntensity * 0.15f; // Reduced multiplier for gentler curve
+        float curveForce = CurveIntensity * 0.15f;
         Vector3 curveVector = perpendicularDirection * curveForce;
         
-        // Combine base velocity with curve velocity
-        Vector3 curvedVelocity = baseVelocity + curveVector;
-        
-        Debug.Log($"Curved velocity applied: {curvedVelocity} (Original: {baseVelocity}, Curve: {curveVector})");
-        return curvedVelocity;
+        return baseVelocity + curveVector;
     }
 
     public Vector3[] GetCurvePreviewPoints(int pointCount = 15)
@@ -146,7 +229,6 @@ public class AimingSystem
         Vector3 baseDirection = AimDirection;
         float maxDistance = CurrentAimLineLength;
         
-        // Calculate curve arc points
         for (int i = 0; i < pointCount; i++)
         {
             float t = i / (float)(pointCount - 1);
@@ -159,16 +241,9 @@ public class AimingSystem
 
     private Vector3 CalculateCurveArcPoint(Vector3 startPos, Vector3 direction, float maxDistance, float t)
     {
-        // Calculate the arc point based on curve intensity
         float distance = maxDistance * t;
-        
-        // Base position along the straight line
         Vector3 basePoint = startPos + direction * distance;
-        
-        // Calculate curve offset (perpendicular to direction in XY plane)
         Vector3 perpendicularDirection = Vector3.Cross(direction, Vector3.forward).normalized;
-        
-        // Create an arc using sine function for smooth curve
         float curveAmount = Mathf.Sin(t * Mathf.PI) * (CurveIntensity / maxCurveIntensity) * (maxDistance * 0.2f);
         Vector3 curveOffset = perpendicularDirection * curveAmount;
         

@@ -10,7 +10,7 @@ public class BilliardController : PhysicsMaterialManager
     [SerializeField] private float chargeSpeed = 10f;
 
     [Header("Components")]
-    [SerializeField] private BilliardBall billiardBall; // Changed from BallMovement
+    [SerializeField] private BilliardBall billiardBall;
     public AimingSystem aimingSystem; 
     [SerializeField] private RigidbodyConfig rigidbodyConfig;
     [SerializeField] private Projection trajectoryProjection;
@@ -22,7 +22,8 @@ public class BilliardController : PhysicsMaterialManager
     [SerializeField] private Color curveColor = Color.yellow;
 
     [Header("UI")]
-    [SerializeField] private RadialPowerBar powerBar; 
+    [SerializeField] private RadialPowerBar powerBar;
+    [SerializeField] private ShootButton shootButton; // New UI button reference
 
     private Rigidbody rb;
     private LineRenderer aimLine;
@@ -43,12 +44,9 @@ public class BilliardController : PhysicsMaterialManager
 
         RigidbodyConfigurator.ConfigureRigidbody(rb, rigidbodyConfig);
         
-        // Safety check for billiardBall component
         if (billiardBall == null)
         {
             billiardBall = GetComponent<BilliardBall>();
-            
-            // If still null, add the component
             if (billiardBall == null)
             {
                 Debug.LogWarning("BilliardBall component not found. Adding it automatically.");
@@ -56,22 +54,61 @@ public class BilliardController : PhysicsMaterialManager
             }
         }
         
-        // Initialize with this MonoBehaviour as owner for compatibility
         billiardBall.Initialize(rb, this);
         aimingSystem.Initialize(mainCam, transform);
         
         SetupLineRenderer();
+        SetupShootButton();
+    }
+
+    private void SetupShootButton()
+    {
+        if (shootButton != null)
+        {
+            shootButton.OnStartCharging += StartPowerCharging;
+            shootButton.OnFireShot += FireShot;
+        }
+        else
+        {
+            Debug.LogWarning("ShootButton not assigned! Please assign it in the inspector.");
+        }
     }
 
     protected override void Start()
     {
         base.Start();
         ApplyPhysicsMaterial();
+        
+        // Subscribe to touch input events for aiming
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnTouchEnd += OnTouchEnd;
+        }
+    }
+    
+    private void OnDestroy()
+    {
+        // Unsubscribe from events
+        if (shootButton != null)
+        {
+            shootButton.OnStartCharging -= StartPowerCharging;
+            shootButton.OnFireShot -= FireShot;
+        }
+        
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnTouchEnd -= OnTouchEnd;
+        }
+    }
+    
+    private void OnTouchEnd()
+    {
+        aimingSystem.OnTouchEnd();
     }
     
     void Update()
     {
-        bool isBallMoving = billiardBall.IsBallMoving(); // Changed from ballMovement
+        bool isBallMoving = billiardBall.IsBallMoving();
 
         if (isBallMoving)
         {
@@ -82,72 +119,99 @@ public class BilliardController : PhysicsMaterialManager
         }
 
         aimingSystem.UpdateAiming();
-        HandleShooting();
+        
+        // Handle charging if in charging state
+        if (isCharging)
+        {
+            HandlePowerCharging();
+        }
+        
         UpdateVisuals();
         UpdateTrajectoryPreview();
-        
-        // Debug key states (less frequent logging)
-        if (aimingSystem.IsCurveShotActive && Time.frameCount % 30 == 0)
-        {
-            Debug.Log($"Curve Shot Active - Intensity: {aimingSystem.CurveIntensity}");
-        }
     }
 
-    private void HandleShooting()
+    private void StartPowerCharging()
     {
-        if (Mouse.current.leftButton.wasPressedThisFrame && !isCharging)
-        {
-            isCharging = true;
-            currentPower = 0f;
-            shootState = ShootState.Charging;
+        if (billiardBall.IsBallMoving()) return; // Can't shoot while ball is moving
+        
+        isCharging = true;
+        currentPower = 0f;
+        shootState = ShootState.Charging;
+        
+        if (powerBar != null) 
+            powerBar.SetActive(true);
             
-            if (powerBar != null) powerBar.SetActive(true);
-        }
-
-        if(Mouse.current.leftButton.isPressed && isCharging)
-        {
-            currentPower += chargeSpeed * Time.deltaTime;
-            currentPower = Mathf.Clamp(currentPower, 0, maxPower);
-
-            if (powerBar != null) powerBar.UpdatePower(PowerPercentage);
-        }
-
-        if (Mouse.current.leftButton.wasReleasedThisFrame && isCharging)
-        {
-            Shoot();
-            isCharging = false;
-            shootState = ShootState.Idle;
-            
-            if (powerBar != null) powerBar.SetActive(false);
-        }
-    }   
+        Debug.Log("Started power charging");
+    }
     
-    public void Shoot()
+    private void HandlePowerCharging()
     {
+        if (!isCharging) return;
+        
+        currentPower += chargeSpeed * Time.deltaTime;
+        currentPower = Mathf.Clamp(currentPower, 0, maxPower);
+
+        if (powerBar != null) 
+            powerBar.UpdatePower(PowerPercentage);
+            
+        // Update button visual feedback
+        if (shootButton != null)
+        {
+            if (PowerPercentage >= 0.8f)
+            {
+                shootButton.SetReadyToFireState();
+            }
+            else
+            {
+                shootButton.SetChargingState();
+            }
+        }
+    }
+    
+    private void FireShot()
+    {
+        if (!isCharging) return; // Can only fire when charging
+        
         Vector3 baseForce = aimingSystem.AimDirection * currentPower;
         
-        Debug.Log($"Shooting - Curve Active: {aimingSystem.IsCurveShotActive}, Intensity: {aimingSystem.CurveIntensity}");
+        Debug.Log($"Firing shot - Power: {currentPower}, Direction: {aimingSystem.AimDirection}");
         
-        // Use the enhanced billiard ball with curve
+        // Apply force with or without curve
         if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
         {
-            billiardBall.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity); // Changed from ballMovement
+            billiardBall.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity);
         }
         else
         {
-            billiardBall.ApplyForce(baseForce); // Changed from ballMovement
+            billiardBall.ApplyForce(baseForce);
         }
 
+        // Reset state
+        isCharging = false;
+        shootState = ShootState.Idle;
+        currentPower = 0f;
+        
+        // Hide UI elements
+        if (powerBar != null) 
+            powerBar.SetActive(false);
+        if (shootButton != null) 
+            shootButton.SetIdleState();
+            
         aimLine.enabled = false;
         arrowIndicator.gameObject.SetActive(false);
         trajectoryProjection?.HideCurvePreview();
-        currentPower = 0f;
+    }
+
+    // Legacy shoot method for compatibility
+    public void Shoot()
+    {
+        FireShot();
     }
 
     public void Shoot(Vector2 velocity)
     {
         Vector3 force = new Vector3(velocity.x, velocity.y, 0);
-        billiardBall.ApplyForce(force); // Changed from ballMovement
+        billiardBall.ApplyForce(force);
 
         aimLine.enabled = false;
         arrowIndicator.gameObject.SetActive(false);
@@ -156,37 +220,35 @@ public class BilliardController : PhysicsMaterialManager
 
     private void UpdateVisuals()
     {
-        if (!isCharging && !Mouse.current.leftButton.isPressed)
+        bool showAiming = !billiardBall.IsBallMoving();
+        
+        aimLine.enabled = showAiming;
+        arrowIndicator.gameObject.SetActive(showAiming);
+        
+        if (!showAiming) return;
+
+        DrawAimLine(aimingSystem.CurrentAimLineLength);
+        RotateArrow();
+
+        // Set color based on state and curve mode
+        Color lineColor;
+        if (isCharging)
         {
-            aimLine.enabled = true;
-            arrowIndicator.gameObject.SetActive(true);
-
-            DrawAimLine(aimingSystem.CurrentAimLineLength);
-            RotateArrow();
-
-            // Set color based on curve shot mode
-            Color lineColor = aimingSystem.IsCurveShotActive ? curveColor : minPowerColor;
-            aimLine.startColor = lineColor;
-            aimLine.endColor = lineColor;
-        }
-        else if (isCharging)
-        {
-            aimLine.enabled = true;
-            arrowIndicator.gameObject.SetActive(true);
-
             float powerPercent = currentPower / maxPower;
-            float scaledLength = Mathf.Min(aimingSystem.CurrentAimLineLength, aimingSystem.CurrentAimLineLength * (0.5f + powerPercent));
-            DrawAimLine(scaledLength);
-            RotateArrow();
-
-            // Color changes based on power and curve mode
             Color baseColor = aimingSystem.IsCurveShotActive ? curveColor : minPowerColor;
-            Color chargeColor = Color.Lerp(baseColor, maxPowerColor, powerPercent);
-            aimLine.startColor = chargeColor;
-            aimLine.endColor = chargeColor;
-
+            lineColor = Color.Lerp(baseColor, maxPowerColor, powerPercent);
+            
+            // Scale arrow based on power
             arrowIndicator.localScale = Vector3.one * (1f + powerPercent * 0.5f);
         }
+        else
+        {
+            lineColor = aimingSystem.IsCurveShotActive ? curveColor : minPowerColor;
+            arrowIndicator.localScale = Vector3.one;
+        }
+        
+        aimLine.startColor = lineColor;
+        aimLine.endColor = lineColor;
     }
 
     private void UpdateTrajectoryPreview()
@@ -215,7 +277,6 @@ public class BilliardController : PhysicsMaterialManager
 
     private void DrawAimLine(float length)
     {
-        // Check if we should draw a curved line or straight line
         if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
         {
             DrawCurvedAimLine(length);
@@ -231,7 +292,6 @@ public class BilliardController : PhysicsMaterialManager
         Vector3 start = transform.position + Vector3.up * 0.05f;
         Vector3 end = start + (aimingSystem.AimDirection * length);
         
-        // Ensure we're using 2-point line renderer for straight lines
         aimLine.positionCount = 2;
         aimLine.SetPosition(0, start);
         aimLine.SetPosition(1, end);
@@ -239,17 +299,14 @@ public class BilliardController : PhysicsMaterialManager
 
     private void DrawCurvedAimLine(float length)
     {
-        // Get curve preview points from aiming system
         Vector3[] curvePoints = aimingSystem.GetCurvePreviewPoints(12);
         
         if (curvePoints != null && curvePoints.Length > 1)
         {
-            // Set up line renderer for curve
             aimLine.positionCount = curvePoints.Length;
             
-            // Find the maximum distance to scale points to fit within length
-            float maxDistance = 0f;
             Vector3 startPos = transform.position + Vector3.up * 0.05f;
+            float maxDistance = 0f;
             
             for (int i = 1; i < curvePoints.Length; i++)
             {
@@ -257,7 +314,6 @@ public class BilliardController : PhysicsMaterialManager
                 if (distance > maxDistance) maxDistance = distance;
             }
             
-            // Apply scaled curve points to line renderer
             for (int i = 0; i < curvePoints.Length; i++)
             {
                 Vector3 scaledPoint;
@@ -267,7 +323,6 @@ public class BilliardController : PhysicsMaterialManager
                 }
                 else
                 {
-                    // Scale the point to fit within the desired length
                     Vector3 direction = curvePoints[i] - curvePoints[0];
                     float scale = length / maxDistance;
                     scaledPoint = startPos + direction * scale;
@@ -278,7 +333,6 @@ public class BilliardController : PhysicsMaterialManager
         }
         else
         {
-            // Fallback to straight line if curve points are not available
             DrawStraightAimLine(length);
         }
     }

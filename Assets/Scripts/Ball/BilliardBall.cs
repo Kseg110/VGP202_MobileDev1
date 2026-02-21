@@ -22,7 +22,10 @@ public class BilliardBall : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
-    // Initialize method for compatibility with existing system
+    void Start()
+    {
+        Debug.Log($"[BilliardBall] Initialized with curveStrength: {curveStrength}, spinDecayRate: {spinDecayRate}");
+    }
     public void Initialize(Rigidbody rigidbody, MonoBehaviour ownerMonoBehaviour = null)
     {
         rb = rigidbody;
@@ -31,10 +34,10 @@ public class BilliardBall : MonoBehaviour
     // Call this to shoot the ball (adapted for 3D)
     public void Shoot(Vector3 direction, float power, float sideSpin = 0f)
     {
-        // 1. Apply the immediate forward impulse
+        // Apply immediate forward impulse
         rb.AddForce(direction.normalized * power, ForceMode.Impulse);
 
-        // 2. Set the side spin ("English")
+        // Set the side spin 
         currentSideSpin = sideSpin;
         debugCurrentSideSpin = currentSideSpin;
         
@@ -137,16 +140,5 @@ public class BilliardBall : MonoBehaviour
         currentSideSpin = Mathf.MoveTowards(currentSideSpin, 0, spinDecayRate * Time.fixedDeltaTime);
     }
 
-    // Add this method to check for conflicts
-    void Start()
-    {
-        // Check for component conflicts
-        BallMovement oldBallMovement = GetComponent<BallMovement>();
-        if (oldBallMovement != null)
-        {
-            Debug.LogWarning("[BilliardBall] Found old BallMovement component! Please remove it to avoid conflicts.");
-        }
-        
-        Debug.Log($"[BilliardBall] Initialized with curveStrength: {curveStrength}, spinDecayRate: {spinDecayRate}");
-    }
+   
 }
