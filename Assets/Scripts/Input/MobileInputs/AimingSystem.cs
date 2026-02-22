@@ -26,6 +26,7 @@ public class AimingSystem
     private Transform ballTransform;
     
     private Vector2 dragStartScreenPos;
+    private Vector2 lastTouchScreenPos;
     private bool isDragging;
     
     public Vector3 AimDirection { get; private set; } = Vector3.right;
@@ -45,18 +46,67 @@ public class AimingSystem
 
     public void UpdateAiming()
     {
-        //bool isInputActive = false;
         Vector2 screenPos = Vector2.zero;
+        bool touching = InputManager.Instance != null && InputManager.Instance.IsTouching();
 
-        if (InputManager.Instance != null && InputManager.Instance.IsTouching())
+        if (touching)
         {
-            //isInputActive = true;
             screenPos = InputManager.Instance.GetTouchScreenPosition();
 
-            // ignore invalid inputa outside aiming area
+            // ignore invalid input outside aiming area
             if (screenPos != Vector2.zero)
             {
-                UpdateAimingFromScreenPosition(screenPos); // Update on click/drag
+                // detect start of drag
+                if (!isDragging)
+                {
+                    isDragging = true;
+                    dragStartScreenPos = screenPos;
+                }
+
+                // store last valid touch position (used to finalize on release)
+                lastTouchScreenPos = screenPos;
+
+                if (enableTouchAiming)
+                {
+                    // Apply sensitivity: scale the drag delta around the drag start.
+                    Vector2 delta = screenPos - dragStartScreenPos;
+                    Vector2 adjustedScreenPos = dragStartScreenPos + delta * touchSensitivity;
+
+                    // Use adjusted position to compute aim (this makes touchSensitivity affect how strongly the drag moves the aim)
+                    UpdateAimingFromScreenPosition(adjustedScreenPos);
+                }
+                else
+                {
+                    UpdateAimingFromScreenPosition(screenPos); // Update on click/drag
+                }
+            }
+        }
+        else
+        {
+            // detect end of drag and finalize aim using last known valid touch position
+            if (isDragging)
+            {
+                isDragging = false;
+
+                if (lastTouchScreenPos != Vector2.zero)
+                {
+                    // When touch ends, apply the same sensitivity logic so final aim matches the drag behavior
+                    if (enableTouchAiming)
+                    {
+                        Vector2 delta = lastTouchScreenPos - dragStartScreenPos;
+                        Vector2 adjustedScreenPos = dragStartScreenPos + delta * touchSensitivity;
+                        UpdateAimingFromScreenPosition(adjustedScreenPos);
+                    }
+                    else
+                    {
+                        UpdateAimingFromScreenPosition(lastTouchScreenPos);
+                    }
+
+                    // clear last position after using it
+                    lastTouchScreenPos = Vector2.zero;
+                }
+
+                OnTouchEnd();
             }
         }
 

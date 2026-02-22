@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Obstacle
   - Pockets
+  - Enemy
   layers:
   - Default
   - TransparentFX
