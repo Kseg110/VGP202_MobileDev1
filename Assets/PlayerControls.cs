@@ -1108,6 +1108,15 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""PointerPosition"",
+                    ""type"": ""Value"",
+                    ""id"": ""a2dd0129-f5e1-4e2e-be4d-a1e43de2ef7f"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
@@ -1141,6 +1150,17 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": "";Touch"",
                     ""action"": ""Accelerometer"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9abf2ac8-5b22-491e-b948-26f52801cb75"",
+                    ""path"": ""<Mouse>/position"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""PointerPosition"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1238,6 +1258,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         m_Gameplay_Touch = m_Gameplay.FindAction("Touch", throwIfNotFound: true);
         m_Gameplay_PrimaryPosition = m_Gameplay.FindAction("PrimaryPosition", throwIfNotFound: true);
         m_Gameplay_Accelerometer = m_Gameplay.FindAction("Accelerometer", throwIfNotFound: true);
+        m_Gameplay_PointerPosition = m_Gameplay.FindAction("PointerPosition", throwIfNotFound: true);
     }
 
     ~@PlayerControls()
@@ -1702,6 +1723,7 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_Touch;
     private readonly InputAction m_Gameplay_PrimaryPosition;
     private readonly InputAction m_Gameplay_Accelerometer;
+    private readonly InputAction m_Gameplay_PointerPosition;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -1725,6 +1747,10 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/Accelerometer".
         /// </summary>
         public InputAction @Accelerometer => m_Wrapper.m_Gameplay_Accelerometer;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/PointerPosition".
+        /// </summary>
+        public InputAction @PointerPosition => m_Wrapper.m_Gameplay_PointerPosition;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -1760,6 +1786,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Accelerometer.started += instance.OnAccelerometer;
             @Accelerometer.performed += instance.OnAccelerometer;
             @Accelerometer.canceled += instance.OnAccelerometer;
+            @PointerPosition.started += instance.OnPointerPosition;
+            @PointerPosition.performed += instance.OnPointerPosition;
+            @PointerPosition.canceled += instance.OnPointerPosition;
         }
 
         /// <summary>
@@ -1780,6 +1809,9 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
             @Accelerometer.started -= instance.OnAccelerometer;
             @Accelerometer.performed -= instance.OnAccelerometer;
             @Accelerometer.canceled -= instance.OnAccelerometer;
+            @PointerPosition.started -= instance.OnPointerPosition;
+            @PointerPosition.performed -= instance.OnPointerPosition;
+            @PointerPosition.canceled -= instance.OnPointerPosition;
         }
 
         /// <summary>
@@ -2055,5 +2087,12 @@ public partial class @PlayerControls: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnAccelerometer(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "PointerPosition" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnPointerPosition(InputAction.CallbackContext context);
     }
 }

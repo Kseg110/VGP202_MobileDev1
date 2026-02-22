@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
 
 [System.Serializable]
@@ -10,7 +10,7 @@ public class AimingSystem
     
     [Header("Touch Aiming Settings")]
     [SerializeField] private float touchSensitivity = 1.0f;
-    [SerializeField] private float minTouchDistance = 50f;
+    [SerializeField] private float minTouchDistance = 1f;
     [SerializeField] private bool useDirectionalAiming = true;
     [SerializeField] private bool enableTouchAiming = true;
     
@@ -24,7 +24,9 @@ public class AimingSystem
     
     private Camera mainCam;
     private Transform ballTransform;
-    private float gameZDepth;
+    
+    private Vector2 dragStartScreenPos;
+    private bool isDragging;
     
     public Vector3 AimDirection { get; private set; } = Vector3.right;
     public float CurrentAimLineLength { get; private set; } = 1.0f;     
@@ -37,103 +39,79 @@ public class AimingSystem
         ballTransform = ball;
         AimDirection = Vector3.right;
         
-        if (mainCam != null && ballTransform != null)
-        {
-            gameZDepth = mainCam.WorldToScreenPoint(ballTransform.position).z;
-            Debug.Log($"[AimingSystem] Initialized - Camera: {camera.name}, IsOrthographic: {camera.orthographic}, Ball Position: {ballTransform.position}, Camera Position: {camera.transform.position}, Calculated Z Depth: {gameZDepth}");
-        }
+        Debug.Log($"[AimingSystem] Initialized - Camera: {camera.name}, Ball Position: {ballTransform.position}, Camera Position: {camera.transform.position}");
+        Debug.Log($"Camera: {mainCam}, BallTransform: {ballTransform}");
     }
 
     public void UpdateAiming()
     {
         bool isInputActive = false;
         Vector2 screenPos = Vector2.zero;
-        
-        // Debug input state every frame
-        Debug.Log($"[AimingSystem] UpdateAiming called - InputManager exists: {InputManager.Instance != null}, Mouse exists: {Mouse.current != null}");
-        
-        // Try InputManager first
-        if (InputManager.Instance != null)
+
+        if (InputManager.Instance != null && InputManager.Instance.IsTouching())
         {
-            bool touching = InputManager.Instance.IsTouching();
-            Debug.Log($"[AimingSystem] InputManager.IsTouching(): {touching}");
-            
-            if (touching)
-            {
-                isInputActive = true;
-                screenPos = InputManager.Instance.GetTouchScreenPosition();
-                Debug.Log($"[AimingSystem] Using InputManager - ScreenPos: {screenPos}");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("[AimingSystem] InputManager.Instance is NULL!");
-        }
-        
-        // Fallback to direct Mouse input
-        if (!isInputActive && Mouse.current != null)
-        {
-            bool mousePressed = Mouse.current.leftButton.isPressed;
-            Debug.Log($"[AimingSystem] Mouse.leftButton.isPressed: {mousePressed}");
-            
-            if (mousePressed)
-            {
-                isInputActive = true;
-                screenPos = Mouse.current.position.ReadValue();
-                Debug.Log($"[AimingSystem] Using Mouse fallback - ScreenPos: {screenPos}");
-            }
-        }
-        
-        Debug.Log($"[AimingSystem] Final isInputActive: {isInputActive}");
-        
-        // Update aiming if any input is active
-        if (isInputActive)
-        {
-            UpdateAimingFromScreenPosition(screenPos);
+            isInputActive = true;
+            screenPos = InputManager.Instance.GetTouchScreenPosition();
+            UpdateAimingFromScreenPosition(screenPos); // Update on click/drag
         }
 
-        // Update curve input
         UpdateCurveInput();
-        
-        // Update aim line length with raycast
         UpdateAimLineLength();
     }
     
     private void UpdateAimingFromScreenPosition(Vector2 screenPos)
     {
-        if (mainCam == null || ballTransform == null)
+        if (mainCam == null || ballTransform == null) return;
+        
+        // Cast a ray from screen position into the 3D world
+        Ray ray = mainCam.ScreenPointToRay(screenPos);
+        
+        // Create a plane at Z=0 (the game plane for 2D games with camera looking down -Z)
+        // The plane normal points toward the camera (positive Z direction)
+        Plane gamePlane = new Plane(Vector3.forward, new Vector3(0, 0, ballTransform.position.z));
+        
+        Debug.Log($"[AimingSystem] Ray: Origin={ray.origin}, Direction={ray.direction}, Ball Z={ballTransform.position.z}");
+        
+        if (gamePlane.Raycast(ray, out float distance))
         {
-            Debug.LogError("[AimingSystem] MainCam or BallTransform is NULL!");
-            return;
-        }
-        
-        // Convert screen position to world position using the stored Z depth
-        Vector3 screenPoint = new Vector3(screenPos.x, screenPos.y, gameZDepth);
-        Vector3 mouseWorldPos = mainCam.ScreenToWorldPoint(screenPoint);
-        
-        // For 2D games, ensure Z is the same as the ball
-        mouseWorldPos.z = ballTransform.position.z;
-        
-        // Calculate direction from ball to mouse world position
-        Vector3 direction = (mouseWorldPos - ballTransform.position);
-        direction.z = 0f;
-        
-        Debug.Log($"[AimingSystem] ScreenPos: {screenPos}, ScreenPoint (with Z): {screenPoint}, MouseWorld: {mouseWorldPos}, Ball: {ballTransform.position}, Direction: {direction}, Magnitude: {direction.magnitude}");
-        
-        if (direction.sqrMagnitude > 0.01f)
-        {
-            AimDirection = direction.normalized;
-            Debug.Log($"[AimingSystem] *** AIM UPDATED *** Direction: {AimDirection}");
+            // Get the world position where the ray hits the plane
+            Vector3 mouseWorldPos = ray.GetPoint(distance);
+            
+            // Calculate direction from ball to mouse position (in XY plane)
+            Vector3 direction = mouseWorldPos - ballTransform.position;
+            direction.z = 0f; // Ensure it's in the 2D plane
+            
+            Debug.Log($"[AimingSystem] ✓ HIT - ScreenPos: {screenPos}, MouseWorld: {mouseWorldPos}, Ball: {ballTransform.position}, Direction: {direction}, Magnitude: {direction.magnitude}");
+            
+            if (direction.sqrMagnitude > 0.01f)
+            {
+                AimDirection = direction.normalized;
+                Debug.Log($"[AimingSystem] *** AIM UPDATED *** Direction: {AimDirection}");
+            }
+            else
+            {
+                Debug.LogWarning($"[AimingSystem] Direction too small: {direction.magnitude}");
+            }
         }
         else
         {
-            Debug.LogWarning($"[AimingSystem] Direction too small - Magnitude: {direction.magnitude}");
+            Debug.LogWarning($"[AimingSystem] ✗ MISS - Raycast missed the game plane! Ray: {ray.origin} -> {ray.direction}");
         }
     }
     
     public void OnTouchEnd()
     {
         Debug.Log("[AimingSystem] Touch input ended");
+    }
+
+    public void OnTouchRelease()
+    {
+        if (InputManager.Instance != null)
+        {
+            Vector2 releaseScreenPos = InputManager.Instance.GetTouchScreenPosition();
+            Debug.Log($"[AimingSystem] Touch released at: {releaseScreenPos}");
+            UpdateAimingFromScreenPosition(releaseScreenPos);
+        }
     }
 
     private void UpdateCurveInput()
@@ -209,6 +187,7 @@ public class AimingSystem
             return baseVelocity;
         }
 
+        // For 2D XY plane, perpendicular is calculated with Z-axis cross product
         Vector3 perpendicularDirection = Vector3.Cross(baseVelocity.normalized, Vector3.forward).normalized;
         float curveForce = CurveIntensity * 0.15f;
         Vector3 curveVector = perpendicularDirection * curveForce;
@@ -240,6 +219,8 @@ public class AimingSystem
     {
         float distance = maxDistance * t;
         Vector3 basePoint = startPos + direction * distance;
+        
+        // For 2D XY plane, perpendicular uses Z-axis
         Vector3 perpendicularDirection = Vector3.Cross(direction, Vector3.forward).normalized;
         float curveAmount = Mathf.Sin(t * Mathf.PI) * (CurveIntensity / maxCurveIntensity) * (maxDistance * 0.2f);
         Vector3 curveOffset = perpendicularDirection * curveAmount;

@@ -80,14 +80,13 @@ public class BilliardController : PhysicsMaterialManager
     {
         base.Start();
         ApplyPhysicsMaterial();
-        
-        // Subscribe to touch input events for aiming
+
         if (InputManager.Instance != null)
         {
             InputManager.Instance.OnTouchEnd += OnTouchEnd;
         }
     }
-    
+
     private void OnDestroy()
     {
         // Unsubscribe from events
@@ -102,12 +101,12 @@ public class BilliardController : PhysicsMaterialManager
             InputManager.Instance.OnTouchEnd -= OnTouchEnd;
         }
     }
-    
+
     private void OnTouchEnd()
     {
-        aimingSystem.OnTouchEnd();
+        aimingSystem.OnTouchRelease();
     }
-    
+
     void Update()
     {
         bool isBallMoving = billiardBall.IsBallMoving();
