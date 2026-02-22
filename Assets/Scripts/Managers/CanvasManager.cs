@@ -11,6 +11,7 @@ public class CanvasManager : MonoBehaviour
     public Button settingsButton;
     public Button backButton;
     public Button quitButton;
+    public Button pauseButton; // Added PauseButton reference
 
     public Button resumeGame;
     public Button returnToMenu;
@@ -40,6 +41,26 @@ public class CanvasManager : MonoBehaviour
         if (backButton) backButton.onClick.AddListener(() => SetMenus(mainMenuPanel, settingsPanel));
 
         if (quitButton) quitButton.onClick.AddListener(QuitGame);
+
+        // Wire pauseButton to toggle the pause panel (same behavior as right-click)
+        if (pauseButton)
+        {
+            pauseButton.onClick.AddListener(() =>
+            {
+                if (pauseMenuPanel == null) return;
+
+                if (pauseMenuPanel.activeSelf)
+                {
+                    SetMenus(null, pauseMenuPanel);
+                    ResumeGame();
+                }
+                else
+                {
+                    SetMenus(pauseMenuPanel, null);
+                    PauseGame();
+                }
+            });
+        }
 
         if (resumeGame) resumeGame.onClick.AddListener(() => { SetMenus(null, pauseMenuPanel); ResumeGame(); });
         if (returnToMenu) returnToMenu.onClick.AddListener(ReturnToMenu);

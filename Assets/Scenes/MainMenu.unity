@@ -267,6 +267,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &454594021 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2759998097407535275, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
+  m_PrefabInstance: {fileID: 917455421277696874}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &1171815625 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1002460388814655383, guid: 99b3b6ccef89319458d9c71ed9811810, type: 3}
@@ -324,6 +335,7 @@ MonoBehaviour:
   settingsButton: {fileID: 1171815625}
   backButton: {fileID: 6788170144659253298, guid: b70d5747e59e13940a6c7aee6969410e, type: 3}
   quitButton: {fileID: 1458684220}
+  pauseButton: {fileID: 454594021}
   resumeGame: {fileID: 1124065956437034714}
   returnToMenu: {fileID: 1124065956437034713}
   endSceneRestartGameButton: {fileID: 3780160852529834603}
@@ -383,6 +395,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InputManager
   aimInputArea: {fileID: 448662837374501765, guid: 277e8c2887a5cab499cf284989df6927, type: 3}
+  autoFindAimInputArea: 1
+  debugInputManager: 0
 --- !u!114 &1458684220 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8068456749720490734, guid: 99b3b6ccef89319458d9c71ed9811810, type: 3}
