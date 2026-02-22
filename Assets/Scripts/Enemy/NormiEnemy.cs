@@ -47,18 +47,18 @@ public class NormiEnemy : EnemyBallBase
         }
     }
 
-    protected override void OnHitByPlayerBall(BilliardBall playerBall, Collision collision)
-    {
-        base.OnHitByPlayerBall(playerBall, collision);
+    //protected override void OnHitByPlayerBall(BilliardBall playerBall, Collision collision)
+    //{
+    //    base.OnHitByPlayerBall(playerBall, collision);
 
-        // Visual feedback: flash color
-        if (rend != null)
-        {
-            rend.material.color = hitColor;
-            hitFlashTimer = hitFlashDuration;
-        }
+    //    // Visual feedback: flash color
+    //    if (rend != null)
+    //    {
+    //        rend.material.color = hitColor;
+    //        hitFlashTimer = hitFlashDuration;
+    //    }
 
-        // Optional: react to hit impulse (e.g., play sound, spawn VFX)
-        // You can also inspect collision.impulse to determine whether to "destroy" this enemy, deduct HP, etc.
-    }
+    //    // Optional: react to hit impulse (e.g., play sound, spawn VFX)
+    //    // You can also inspect collision.impulse to determine whether to "destroy" this enemy, deduct HP, etc.
+    //}
 }

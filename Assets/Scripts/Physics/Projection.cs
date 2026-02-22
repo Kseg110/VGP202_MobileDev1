@@ -16,6 +16,20 @@ public class Projection : PhysicsMaterialManager
         base.Start();
         CreatePhysicsScene();
         SetupCurvePreviewLine();
+
+        // Ensure a trajectory line exists so simulations don't throw if _line wasn't assigned in inspector
+        if (_line == null)
+        {
+            Debug.LogWarning("[Projection] _line was not assigned in the inspector. Creating a fallback trajectory LineRenderer.");
+            GameObject lineObj = new GameObject("TrajectoryLine");
+            _line = lineObj.AddComponent<LineRenderer>();
+            _line.material = new Material(Shader.Find("Sprites/Default"));
+            _line.startWidth = 0.03f;
+            _line.endWidth = 0.03f;
+            _line.startColor = Color.white;
+            _line.endColor = Color.white;
+            _line.enabled = false;
+        }
     }
 
     void CreatePhysicsScene()
@@ -23,10 +37,18 @@ public class Projection : PhysicsMaterialManager
         _simulationScene = SceneManager.CreateScene("Simulation", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
         _physicsScene = _simulationScene.GetPhysicsScene();
 
+        if (_obstaclesParent == null)
+        {
+            Debug.LogWarning("[Projection] _obstaclesParent has not been assigned. No obstacle ghosts will be created in the simulation scene.");
+            return;
+        }
+
         foreach (Transform obj in _obstaclesParent)
         {
             var ghostObj = Instantiate(obj.gameObject, obj.position, obj.rotation);
-            ghostObj.GetComponent<Renderer>().enabled = false;
+            var renderer = ghostObj.GetComponent<Renderer>();
+            if (renderer != null)
+                renderer.enabled = false;
             
             Collider wallCollider = ghostObj.GetComponent<Collider>();
             if (wallCollider != null)
@@ -57,10 +79,17 @@ public class Projection : PhysicsMaterialManager
 
     public void SimulateTrajectory(BilliardController PlayerCueBall, Vector2 pos, Vector2 velocity)
     {
+        if (_simulationScene == null || !_physicsScene.IsValid())
+        {
+            Debug.LogWarning("[Projection] Simulation scene is not available. Call CreatePhysicsScene() first.");
+            return;
+        }
+
         Vector3 position3D = new Vector3(pos.x, PlayerCueBall.transform.position.y, pos.y);
         
         var ghostObj = Instantiate(PlayerCueBall, position3D, Quaternion.identity);
-        ghostObj.GetComponent<Renderer>().enabled = false;
+        var ghostRenderer = ghostObj.GetComponent<Renderer>();
+        if (ghostRenderer != null) ghostRenderer.enabled = false;
         
         Collider ballCollider = ghostObj.GetComponent<Collider>();
         if (ballCollider != null)
@@ -77,6 +106,13 @@ public class Projection : PhysicsMaterialManager
         SceneManager.MoveGameObjectToScene(ghostObj.gameObject, _simulationScene);
         ghostObj.Shoot(velocity);
 
+        if (_line == null)
+        {
+            Debug.LogWarning("[Projection] Trajectory LineRenderer is null; skipping visualization.");
+            DestroyImmediate(ghostObj.gameObject);
+            return;
+        }
+
         _line.positionCount = _maxPhysicsFrameIterations;
 
         for (int i = 0; i < _maxPhysicsFrameIterations; i++)
@@ -84,7 +120,7 @@ public class Projection : PhysicsMaterialManager
             _physicsScene.Simulate(Time.fixedDeltaTime);
             _line.SetPosition(i, ghostObj.transform.position);
             
-            if (ghostRb.linearVelocity.magnitude < 0.1f)
+            if (ghostRb != null && ghostRb.linearVelocity.magnitude < 0.1f)
             {
                 for (int j = i + 1; j < _maxPhysicsFrameIterations; j++)
                 {
@@ -99,10 +135,17 @@ public class Projection : PhysicsMaterialManager
 
     public void SimulateCurvedTrajectory(BilliardController PlayerCueBall, Vector2 pos, Vector3 curvedVelocity, float curveIntensity)
     {
+        if (_simulationScene == null || !_physicsScene.IsValid())
+        {
+            Debug.LogWarning("[Projection] Simulation scene is not available. Call CreatePhysicsScene() first.");
+            return;
+        }
+
         Vector3 position3D = new Vector3(pos.x, PlayerCueBall.transform.position.y, pos.y);
         
         var ghostObj = Instantiate(PlayerCueBall, position3D, Quaternion.identity);
-        ghostObj.GetComponent<Renderer>().enabled = false;
+        var ghostRenderer = ghostObj.GetComponent<Renderer>();
+        if (ghostRenderer != null) ghostRenderer.enabled = false;
         
         Collider ballCollider = ghostObj.GetComponent<Collider>();
         if (ballCollider != null)
@@ -122,11 +165,19 @@ public class Projection : PhysicsMaterialManager
         BilliardBall ghostBilliardBall = ghostObj.GetComponent<BilliardBall>(); // Changed from BallMovement
         if (ghostBilliardBall != null)
         {
-            ghostBilliardBall.ApplyForceWithCurve(curvedVelocity, curveIntensity);
+            // Use a short impulse + curve pull so the ghost behaves like real shot
+            ghostBilliardBall.ApplyForceWithCurve(curvedVelocity, Vector3.Cross(curvedVelocity.normalized, Vector3.forward), curveIntensity);
         }
-        else
+        else if (ghostRb != null)
         {
             ghostRb.AddForce(curvedVelocity, ForceMode.Impulse);
+        }
+
+        if (_line == null)
+        {
+            Debug.LogWarning("[Projection] Trajectory LineRenderer is null; skipping visualization.");
+            DestroyImmediate(ghostObj.gameObject);
+            return;
         }
 
         _line.positionCount = _maxPhysicsFrameIterations;
@@ -136,7 +187,7 @@ public class Projection : PhysicsMaterialManager
             _physicsScene.Simulate(Time.fixedDeltaTime);
             _line.SetPosition(i, ghostObj.transform.position);
             
-            if (ghostRb.linearVelocity.magnitude < 0.1f)
+            if (ghostRb != null && ghostRb.linearVelocity.magnitude < 0.1f)
             {
                 for (int j = i + 1; j < _maxPhysicsFrameIterations; j++)
                 {

@@ -129,8 +129,7 @@ public class InputManager : MonoBehaviour
     public void SetAimInputArea(Collider2D collider)
     {
         aimInputArea = collider;
-        if (debugInputManager)
-            Debug.Log($"[InputManager] AimInputArea explicitly set: {(collider ? collider.name : "null")}");
+        if (debugInputManager);
     }
 
     private void TryFindAimInputAreaInScene()
@@ -151,13 +150,12 @@ public class InputManager : MonoBehaviour
                 if (c != null)
                 {
                     aimInputArea = c;
-                    if (debugInputManager) Debug.Log($"[InputManager] Auto-found AimInputArea on scene load: {found.name}");
+                    if (debugInputManager);
                     return;
                 }
             }
         }
 
-        // fallback general find by name (works across nested objects)
         var go = GameObject.Find("AimInputArea");
         if (go != null)
         {
@@ -165,18 +163,16 @@ public class InputManager : MonoBehaviour
             if (c != null)
             {
                 aimInputArea = c;
-                if (debugInputManager) Debug.Log($"[InputManager] Auto-found AimInputArea (fallback): {go.name}");
+                if (debugInputManager);
             }
         }
     }
 
-    // Try to resolve a usable screen position from available devices/actions.
-    // Returns true when a candidate position was found (not necessarily inside aim area).
     private bool TryGetPointerScreenPosition(out Vector2 screenPos)
     {
         screenPos = Vector2.zero;
 
-        // 1) Touchscreen primary touch (mobile)
+        // Touchscreen primary touch (mobile)
         try
         {
             if (Touchscreen.current != null && Touchscreen.current.primaryTouch != null)
@@ -191,7 +187,7 @@ public class InputManager : MonoBehaviour
         }
         catch { /* ignore device query errors */ }
 
-        // 2) InputAction pointer (project-specific action)
+        // InputAction pointer (project-specific action)
         if (input != null)
         {
             try
@@ -304,7 +300,7 @@ public class InputManager : MonoBehaviour
 
             bool overUI = IsPointerOverUIAtPosition(pos);
             bool inside = IsScreenPositionWithinAimArea(pos);
-            if (debugInputManager) Debug.Log($"[InputManager] PendingStart pos={pos} overUI={overUI} insideArea={inside}");
+            if (debugInputManager);
             if (!overUI && inside)
             {
                 OnTouchBegin?.Invoke();
@@ -319,7 +315,7 @@ public class InputManager : MonoBehaviour
 
             bool overUI = IsPointerOverUIAtPosition(pos);
             bool inside = IsScreenPositionWithinAimArea(pos);
-            if (debugInputManager) Debug.Log($"[InputManager] PendingEnd pos={pos} overUI={overUI} insideArea={inside}");
+            if (debugInputManager);
             if (!overUI && inside)
             {
                 OnTouchEnd?.Invoke();

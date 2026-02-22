@@ -49,7 +49,6 @@ public class ShootButton : MonoBehaviour
     
     private void ConnectToPlayer(BilliardController player)
     {
-        // Disconnect from old player if exists
         if (currentPlayer != null)
         {
             OnStartCharging = null;
@@ -57,9 +56,8 @@ public class ShootButton : MonoBehaviour
         }
         
         currentPlayer = player;
-        
-        // The player will subscribe to our events in its SetupShootButton method
-        Debug.Log($"[ShootButton] Connected to player: {player.gameObject.name}");
+       
+        //Debug.Log($"[ShootButton] Connected to player: {player.gameObject.name}");
     }
     
     private void HandleButtonClick()
@@ -79,7 +77,7 @@ public class ShootButton : MonoBehaviour
         IsCharging = true;
         SetChargingState();
         OnStartCharging?.Invoke();
-        Debug.Log("[ShootButton] Started charging");
+        //Debug.Log("[ShootButton] Started charging");
     }
     
     private void FireShot()
@@ -87,7 +85,7 @@ public class ShootButton : MonoBehaviour
         IsCharging = false;
         SetIdleState();
         OnFireShot?.Invoke();
-        Debug.Log("[ShootButton] Fired shot");
+        //Debug.Log("[ShootButton] Fired shot");
     }
     
     public void SetIdleState()

@@ -80,13 +80,9 @@ public abstract class EnemyBallBase : MonoBehaviour
     public virtual void ApplyForce(Vector3 impulse)
     {
         rb.AddForce(impulse, ForceMode.Impulse);
-        Debug.Log($"[EnemyBallBase] ApplyForce impulse={impulse}");
+        //Debug.Log($"[EnemyBallBase] ApplyForce impulse={impulse}");
     }
 
-    /// <summary>
-    /// Apply an impulse and optionally a short-lived lateral pull to simulate a curved hit.
-    /// (Simple support; derived classes may override for advanced behaviors.)
-    /// </summary>
     public virtual void ApplyForceWithCurve(Vector3 baseImpulse, Vector3 lateralDirection, float lateralIntensity)
     {
         rb.AddForce(baseImpulse, ForceMode.Impulse);
@@ -97,7 +93,7 @@ public abstract class EnemyBallBase : MonoBehaviour
             StartCoroutine(ApplySimpleCurveCoroutine(lateralDirection.normalized, lateralIntensity));
         }
 
-        Debug.Log($"[EnemyBallBase] ApplyForceWithCurve base={baseImpulse} lateralDir={lateralDirection} intensity={lateralIntensity}");
+        //Debug.Log($"[EnemyBallBase] ApplyForceWithCurve base={baseImpulse} lateralDir={lateralDirection} intensity={lateralIntensity}");
     }
 
     private IEnumerator ApplySimpleCurveCoroutine(Vector3 lateralDir, float intensity)
@@ -126,7 +122,7 @@ public abstract class EnemyBallBase : MonoBehaviour
         var playerBall = collision.rigidbody.GetComponent<BilliardBall>();
         if (playerBall != null)
         {
-            OnHitByPlayerBall(playerBall, collision);
+            //OnHitByPlayerBall(playerBall, collision);
         }
     }
 
@@ -138,12 +134,12 @@ public abstract class EnemyBallBase : MonoBehaviour
         // If the trigger is a pocket (either by component or by tag), destroy this enemy
         if (other.GetComponent<Pockets>() != null || other.CompareTag("Pocket"))
         {
-            Debug.Log($"[EnemyBallBase] Enemy '{name}' fell into pocket and will be destroyed.");
+            //Debug.Log($"[EnemyBallBase] Enemy '{name}' fell into pocket and will be destroyed.");
             Destroy(gameObject);
         }
     }
-    protected virtual void OnHitByPlayerBall(BilliardBall playerBall, Collision collision)
-    {
-        Debug.Log($"[EnemyBallBase] Hit by player ball: {name}. Collision impulse approx: {collision.impulse.magnitude:F3}");
-    }
+    //protected virtual void OnHitByPlayerBall(BilliardBall playerBall, Collision collision)
+    //{
+    //    Debug.Log($"[EnemyBallBase] Hit by player ball: {name}. Collision impulse approx: {collision.impulse.magnitude:F3}");
+    //}
 }

@@ -101,11 +101,6 @@ public class GameCanvasManager : MonoBehaviour
             GameManager.Instance.OnRoundsChanged += UpdateLevel;
             
             isInitialized = true;
-            Debug.Log($"[GameCanvasManager] HUD Initialized - Lives: {GameManager.Instance.Lives}, Shots: {GameManager.Instance.Shots}, Level: {GameManager.Instance.Rounds}");
-        }
-        else
-        {
-            Debug.LogWarning("[GameCanvasManager] GameManager instance not found! Will retry...");
         }
 
         if (pauseMenuPanel != null)
@@ -134,7 +129,6 @@ public class GameCanvasManager : MonoBehaviour
         {
             pauseMenuPanel.SetActive(true);
             Time.timeScale = 0f;
-            Debug.Log("[GameCanvasManager] Game Paused");
         }
     }
 
@@ -144,14 +138,12 @@ public class GameCanvasManager : MonoBehaviour
         {
             pauseMenuPanel.SetActive(false);
             Time.timeScale = 1f;
-            Debug.Log("[GameCanvasManager] Game Resumed");
         }
     }
 
     private void ReturnToMenu()
     {
         Time.timeScale = 1f;
-        Debug.Log("[GameCanvasManager] Returning to Menu");
         
         // Reset GameManager values for next game
         if (GameManager.Instance != null)
@@ -167,7 +159,6 @@ public class GameCanvasManager : MonoBehaviour
     private void RestartGame()
     {
         Time.timeScale = 1f;
-        Debug.Log("[GameCanvasManager] Restarting Game");
         
         if (GameManager.Instance != null)
         {
@@ -190,7 +181,6 @@ public class GameCanvasManager : MonoBehaviour
             livesText.SetText("Lives: {0}", lives);
             livesText.ForceMeshUpdate();
 
-            Debug.Log($"[GameCanvasManager] Lives updated to: {lives} -> written to '{livesText.gameObject.name}', Font='{livesText.font?.name}', Text='{livesText.text}'");
         }
     }
 
@@ -201,7 +191,6 @@ public class GameCanvasManager : MonoBehaviour
             shotsText.SetText("Shots: {0}", shots);
             shotsText.ForceMeshUpdate();
 
-            Debug.Log($"[GameCanvasManager] Shots updated to: {shots} -> written to '{shotsText.gameObject.name}', Font='{shotsText.font?.name}', Text='{shotsText.text}'");
         }
     }
 

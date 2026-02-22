@@ -253,13 +253,11 @@ public class GameManager : MonoBehaviour
         // Don't spawn if player already exists
         if (_playerInstance != null)
         {
-            Debug.LogWarning("[GameManager] Player already exists, not spawning again.");
             return;
         }
 
         if (playerPrefab == null)
         {
-            Debug.LogError("[GameManager] Player prefab not assigned!");
             return;
         }
 
@@ -273,7 +271,6 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning("[GameManager] No spawn point found, using default position.");
                 spawnPoint = null;
             }
         }
@@ -287,8 +284,6 @@ public class GameManager : MonoBehaviour
         
         // Notify listeners
         OnPlayerControllerCreated?.Invoke(_playerInstance);
-        
-        Debug.Log($"[GameManager] Player spawned at {spawnPos}");
     }
 
     public void RespawnPlayer(Vector3 position)
@@ -312,11 +307,9 @@ public class GameManager : MonoBehaviour
                 ball.currentSideSpin = 0f;
             }
             
-            Debug.Log($"[GameManager] Player respawned at {position}");
         }
         else
         {
-            Debug.LogWarning("[GameManager] Cannot respawn - player instance is null!");
             SpawnPlayer();
         }
     }
@@ -325,7 +318,6 @@ public class GameManager : MonoBehaviour
     {
         PlayerPrefs.SetInt("LoadFromCheckpoint", value ? 1 : 0);
         PlayerPrefs.Save();
-        Debug.Log($"SetLoadFromCheckpoint called with value: {value}");
     }
 
     public void WinGame()

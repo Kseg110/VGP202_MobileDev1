@@ -139,7 +139,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 36
+  m_Constraints: 4
   m_CollisionDetection: 0
 --- !u!114 &7294551192386954879
 MonoBehaviour:
@@ -162,6 +162,6 @@ MonoBehaviour:
   mass: 1
   curvePullForce: 4
   curveDuration: 0.6
-  idleColor: {r: 0, g: 1, b: 1, a: 1}
+  enemyTag: Enemy
   hitColor: {r: 1, g: 0, b: 0, a: 1}
   hitFlashDuration: 0.2

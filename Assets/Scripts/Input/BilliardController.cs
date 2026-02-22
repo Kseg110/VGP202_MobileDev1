@@ -47,7 +47,6 @@ public class BilliardController : PhysicsMaterialManager
             billiardBall = GetComponent<BilliardBall>();
             if (billiardBall == null)
             {
-                Debug.LogWarning("BilliardBall component not found. Adding it automatically.");
                 billiardBall = gameObject.AddComponent<BilliardBall>();
             }
         }
@@ -69,7 +68,7 @@ public class BilliardController : PhysicsMaterialManager
             shootButton = FindFirstObjectByType<ShootButton>();
             if (shootButton == null)
             {
-                Debug.LogWarning("[BilliardController] ShootButton not found in scene!");
+                //Debug.LogWarning("[BilliardController] ShootButton not found in scene!");
             }
         }
         
@@ -81,7 +80,6 @@ public class BilliardController : PhysicsMaterialManager
             InputManager.Instance.OnTouchEnd += OnTouchEnd;
         }
         
-        Debug.Log($"[BilliardController] Initialized for {gameObject.name}");
     }
 
     private void SetupShootButton()
@@ -90,11 +88,6 @@ public class BilliardController : PhysicsMaterialManager
         {
             shootButton.OnStartCharging += StartPowerCharging;
             shootButton.OnFireShot += FireShot;
-            Debug.Log($"[BilliardController] Connected to ShootButton");
-        }
-        else
-        {
-            Debug.LogWarning("[BilliardController] ShootButton not assigned and not found!");
         }
     }
 
@@ -146,7 +139,6 @@ public class BilliardController : PhysicsMaterialManager
     {
         if (billiardBall.IsBallMoving())
         {
-            Debug.Log("[BilliardController] Can't shoot - ball is moving");
             return;
         }
         
@@ -155,8 +147,6 @@ public class BilliardController : PhysicsMaterialManager
         
         if (powerBar != null) 
             powerBar.SetActive(true);
-            
-        Debug.Log("[BilliardController] Power charging started");
     }
     
     private void HandlePowerCharging()
@@ -187,13 +177,10 @@ public class BilliardController : PhysicsMaterialManager
     {
         if (!isCharging)
         {
-            Debug.Log("[BilliardController] Can't fire - not charging");
             return;
         }
         
         Vector3 baseForce = aimingSystem.AimDirection * currentPower;
-        
-        Debug.Log($"[BilliardController] Shot fired - Power: {currentPower:F2}, Direction: {aimingSystem.AimDirection}");
         
         // Apply force with or without curve
         if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
@@ -209,7 +196,6 @@ public class BilliardController : PhysicsMaterialManager
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Shots--;
-            Debug.Log($"[BilliardController] Shots remaining: {GameManager.Instance.Shots}");
         }
 
         // Reset state

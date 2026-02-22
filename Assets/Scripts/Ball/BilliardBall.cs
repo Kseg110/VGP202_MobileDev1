@@ -53,6 +53,7 @@ public class BilliardBall : MonoBehaviour
         Debug.Log($"[BilliardBall] Applied straight force: {force}");
     }
 
+    // Existing two-argument API (kept for compatibility)
     public void ApplyForceWithCurve(Vector3 baseForce, float curveIntensity)
     {
         // Convert curve intensity to side spin - slightly more conservative conversion
@@ -65,6 +66,27 @@ public class BilliardBall : MonoBehaviour
         Debug.Log($"[BilliardBall] Applied curved force: {baseForce}, Spin={sideSpin}, CurveIntensity={curveIntensity}");
     }
 
+
+    public void ApplyForceWithCurve(Vector3 baseForce, Vector3 lateralDirection, float lateralIntensity)
+    {
+        rb.AddForce(baseForce, ForceMode.Impulse);
+
+        // Determine spin sign from lateralDirection
+        float sign = 0f;
+        if (lateralDirection != Vector3.zero)
+        {
+            sign = Mathf.Sign(Vector3.Dot(lateralDirection.normalized, Vector3.right));
+        }
+
+        // Map lateralIntensity for sidespin
+        float sideSpin = Mathf.Clamp((lateralIntensity / 2.5f) * sign, -1f, 1f);
+
+        currentSideSpin = sideSpin;
+        debugCurrentSideSpin = currentSideSpin;
+
+        Debug.Log($"[BilliardBall] Applied curved force (3-arg): {baseForce}, LateralDir={lateralDirection}, Intensity={lateralIntensity}, Spin={sideSpin}");
+    }
+
     public bool IsBallMoving()
     {
         bool isLinearVelocityLow = rb.linearVelocity.magnitude <= stopVelocityThreshold;
@@ -72,12 +94,12 @@ public class BilliardBall : MonoBehaviour
         
         bool isMoving = !(isLinearVelocityLow && isAngularVelocityLow);
         
-        // Only reset when ball completely stops and wasn't moving last frame
+        // Reset when ball completely stops
         if (!isMoving && wasMovingLastFrame)
         {
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            currentSideSpin = 0f; // Reset immediately when stopped
+            currentSideSpin = 0f;
             debugCurrentSideSpin = currentSideSpin;
             
             Debug.Log("[BilliardBall] Ball stopped, spin reset");
@@ -89,10 +111,9 @@ public class BilliardBall : MonoBehaviour
 
     void FixedUpdate()
     {
-        // Update debug value
         debugCurrentSideSpin = currentSideSpin;
         
-        // Only apply curve if the ball is moving and has spin
+        // Only apply curve if the ball is moving and has spin applied
         if (rb.linearVelocity.magnitude > stopVelocityThreshold && Mathf.Abs(currentSideSpin) > 0.01f)
         {
             ApplyMagnusForce();
@@ -102,32 +123,27 @@ public class BilliardBall : MonoBehaviour
 
     void ApplyMagnusForce()
     {
-        // 1. Get current velocity direction (in XY plane for top-down view)
+        // Get current velocity direction (in XY)
         Vector3 velocity = rb.linearVelocity;
         Vector2 velocity2D = new Vector2(velocity.x, velocity.y);
         
-        // Skip if velocity is too small to prevent NaN issues
         if (velocity2D.magnitude < 0.01f) return;
         
-        // 2. Calculate the perpendicular vector for 3D (cross product with Z-axis)
+        // Calculate the perpendicular vector (cross product with Z-axis)
         Vector3 perpDirection = Vector3.Cross(velocity.normalized, Vector3.forward).normalized;
 
-        // 3. Calculate Force - More balanced formula
-        // The force should be proportional to velocity for realistic Magnus effect
+        // Calculate Force
+        // force should be proportional to velocity 
         float velocityMultiplier = Mathf.Clamp(velocity2D.magnitude, 0.8f, 8f); // Reduced max clamp for gentler curves
-        
-        // **FIX: Invert the spin direction to match the expected curve direction**
         float magnusForceMagnitude = -currentSideSpin * curveStrength * velocityMultiplier; // Added negative sign here
 
-        // 4. Apply the force (only in XY plane)
+        // Apply the force (only in XY plane)
         Vector3 magnusForce = perpDirection * magnusForceMagnitude;
         rb.AddForce(magnusForce, ForceMode.Force);
         
         // Debug visualization and logging
         Debug.DrawRay(transform.position, magnusForce * 0.5f, Color.green, 0.1f);
         Debug.DrawRay(transform.position, velocity.normalized * 2f, Color.blue, 0.1f);
-        
-        // Occasional debug logging
         if (Time.fixedTime % 0.5f < Time.fixedDeltaTime)
         {
             Debug.Log($"[BilliardBall] Magnus Force: {magnusForce.magnitude:F3}, Spin: {currentSideSpin:F3}, Velocity: {velocity2D.magnitude:F3}");

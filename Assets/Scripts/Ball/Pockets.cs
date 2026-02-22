@@ -22,7 +22,7 @@ public class Pockets : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[Pockets] GameManager instance not found!");
+            //Debug.LogError("[Pockets] GameManager instance not found!");
         }
     }
 
@@ -40,7 +40,7 @@ public class Pockets : MonoBehaviour
         if (player != null)
         {
             lastStationaryPosition = player.transform.position;
-            Debug.Log($"[Pockets] Initial player position tracked: {lastStationaryPosition}");
+            //Debug.Log($"[Pockets] Initial player position tracked: {lastStationaryPosition}");
         }
     }
 
@@ -64,12 +64,12 @@ public class Pockets : MonoBehaviour
         
         if (ball != null)
         {
-            Debug.Log($"[Pockets] Trigger detected! Object: {other.gameObject.name}, Layer: {LayerMask.LayerToName(other.gameObject.layer)}");
+            //Debug.Log($"[Pockets] Trigger detected! Object: {other.gameObject.name}, Layer: {LayerMask.LayerToName(other.gameObject.layer)}");
             HandlePlayerFallInPocket(ball);
         }
         else
         {
-            Debug.Log($"[Pockets] Trigger detected but no BilliardController found on: {other.gameObject.name}");
+            //Debug.Log($"[Pockets] Trigger detected but no BilliardController found on: {other.gameObject.name}");
         }
     }
 
@@ -80,7 +80,7 @@ public class Pockets : MonoBehaviour
         {
             GameManager.Instance.Lives -= 1;
             
-            Debug.Log($"[Pockets] Player fell in pocket! Lives remaining: {GameManager.Instance.Lives}");
+            //Debug.Log($"[Pockets] Player fell in pocket! Lives remaining: {GameManager.Instance.Lives}");
             
             // Check if player has lives remaining
             if (GameManager.Instance.Lives > 0)
@@ -96,7 +96,7 @@ public class Pockets : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[Pockets] GameManager instance not found!");
+            //Debug.LogError("[Pockets] GameManager instance not found!");
         }
     }
 
@@ -120,14 +120,14 @@ public class Pockets : MonoBehaviour
             GameManager.Instance.PlayerInstance.gameObject.SetActive(true);
         }
         
-        Debug.Log($"[Pockets] Player respawned at: {lastStationaryPosition}");
+        //Debug.Log($"[Pockets] Player respawned at: {lastStationaryPosition}");
     }
 
     private void HandleGameOver()
     {
-        Debug.Log("[Pockets] Game Over - No lives remaining!");
+        //Debug.Log("[Pockets] Game Over - No lives remaining!");
         
-        // Use GameManager to handle player death
+        // GameManager to handle player death
         GameManager.Instance.PlayerDied();
     }
 }
