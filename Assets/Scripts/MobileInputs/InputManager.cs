@@ -52,7 +52,19 @@ public class InputManager : MonoBehaviour
 
     public Vector2 GetTouchScreenPosition()
     {
-        return input.Gameplay.PrimaryPosition.ReadValue<Vector2>();
+        // Always try mouse first for editor testing
+        if (UnityEngine.InputSystem.Mouse.current != null)
+        {
+            return UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+        }
+        
+        // Then try touch input
+        if (input != null && input.UI.Point != null)
+        {
+            return input.UI.Point.ReadValue<Vector2>();
+        }
+        
+        return Vector2.zero;
     }
 
     public Vector3 GetTouchWorldPosition(Camera cameraToUse = null)
@@ -88,7 +100,19 @@ public class InputManager : MonoBehaviour
     // Utility methods for billiards gameplay
     public bool IsTouching()
     {
-        return input.Gameplay.Touch.ReadValue<float>() > 0;
+        // Check mouse first for editor testing
+        if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.isPressed)
+        {
+            return true;
+        }
+        
+        // Then check touch
+        if (input != null && input.Gameplay.Touch.ReadValue<float>() > 0)
+        {
+            return true;
+        }
+        
+        return false;
     }
 
     public Vector2 GetTouchDelta(Vector2 lastPosition)

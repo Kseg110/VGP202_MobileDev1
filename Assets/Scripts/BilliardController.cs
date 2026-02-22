@@ -42,6 +42,8 @@ public class BilliardController : PhysicsMaterialManager
         aimLine = GetComponent<LineRenderer>();
         mainCam = Camera.main;
 
+        Debug.Log($"BilliardController Awake - Camera: {(mainCam != null ? mainCam.name : "null")}, LineRenderer: {(aimLine != null ? "found" : "null")}");
+
         RigidbodyConfigurator.ConfigureRigidbody(rb, rigidbodyConfig);
         
         if (billiardBall == null)
@@ -227,6 +229,12 @@ public class BilliardController : PhysicsMaterialManager
         
         if (!showAiming) return;
 
+        // Add debug for line renderer updates
+        Vector3 startPos = transform.position + Vector3.up * 0.05f;
+        Vector3 endPos = startPos + (aimingSystem.AimDirection * aimingSystem.CurrentAimLineLength);
+        
+        Debug.Log($"Line Renderer Update - Start: {startPos}, End: {endPos}, Direction: {aimingSystem.AimDirection}");
+
         DrawAimLine(aimingSystem.CurrentAimLineLength);
         RotateArrow();
 
@@ -272,6 +280,7 @@ public class BilliardController : PhysicsMaterialManager
         {
             Quaternion lookRot = Quaternion.LookRotation(aimingSystem.AimDirection);
             arrowIndicator.rotation = lookRot;
+            Debug.Log($"Arrow rotation updated: {lookRot.eulerAngles}");
         }
     }
 
@@ -295,6 +304,8 @@ public class BilliardController : PhysicsMaterialManager
         aimLine.positionCount = 2;
         aimLine.SetPosition(0, start);
         aimLine.SetPosition(1, end);
+        
+        Debug.Log($"Drawing straight line - Start: {start}, End: {end}, Length: {length}");
     }
 
     private void DrawCurvedAimLine(float length)
@@ -340,12 +351,14 @@ public class BilliardController : PhysicsMaterialManager
     private void SetupLineRenderer()
     {
         aimLine.positionCount = 2;
-        aimLine.enabled = false;
+        aimLine.enabled = true; // Make sure it starts enabled for testing
         aimLine.startWidth = 0.05f;
         aimLine.endWidth = 0.05f;   
         aimLine.material = new Material(Shader.Find("Sprites/Default"));
         aimLine.startColor = Color.red;
         aimLine.endColor = Color.red;
+        
+        Debug.Log($"LineRenderer setup complete - Enabled: {aimLine.enabled}, Width: {aimLine.startWidth}");
     }
 
     private void ApplyPhysicsMaterial()

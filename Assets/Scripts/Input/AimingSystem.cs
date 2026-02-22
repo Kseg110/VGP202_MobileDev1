@@ -10,7 +10,9 @@ public class AimingSystem
     
     [Header("Touch Aiming Settings")]
     [SerializeField] private float touchSensitivity = 1.0f;
-    [SerializeField] private float minTouchDistance = 0.1f; // Minimum distance for touch drag
+    [SerializeField] private float minTouchDistance = 50f;
+    [SerializeField] private bool useDirectionalAiming = true;
+    [SerializeField] private bool enableTouchAiming = true;
     
     [Header("Curve Shot Settings")]
     [SerializeField] private float maxCurveIntensity = 3.0f;
@@ -22,13 +24,9 @@ public class AimingSystem
     
     private Camera mainCam;
     private Transform ballTransform;
+    private float gameZDepth;
     
-    // Touch input tracking
-    private Vector2 touchStartPosition;
-    private Vector2 currentTouchPosition;
-    private bool isDragging;
-    
-    public Vector3 AimDirection { get; private set; }
+    public Vector3 AimDirection { get; private set; } = Vector3.right;
     public float CurrentAimLineLength { get; private set; } = 1.0f;     
     public float CurveIntensity { get; private set; }
     public bool IsCurveShotActive { get; private set; }
@@ -37,111 +35,109 @@ public class AimingSystem
     {
         mainCam = camera;
         ballTransform = ball;
+        AimDirection = Vector3.right;
+        
+        if (mainCam != null && ballTransform != null)
+        {
+            gameZDepth = mainCam.WorldToScreenPoint(ballTransform.position).z;
+            Debug.Log($"[AimingSystem] Initialized - Camera: {camera.name}, IsOrthographic: {camera.orthographic}, Ball Position: {ballTransform.position}, Camera Position: {camera.transform.position}, Calculated Z Depth: {gameZDepth}");
+        }
     }
 
     public void UpdateAiming()
     {
-        // Handle both touch and mouse input for flexibility
-        if (InputManager.Instance != null && InputManager.Instance.IsTouching())
+        bool isInputActive = false;
+        Vector2 screenPos = Vector2.zero;
+        
+        // Debug input state every frame
+        Debug.Log($"[AimingSystem] UpdateAiming called - InputManager exists: {InputManager.Instance != null}, Mouse exists: {Mouse.current != null}");
+        
+        // Try InputManager first
+        if (InputManager.Instance != null)
         {
-            UpdateTouchAiming();
+            bool touching = InputManager.Instance.IsTouching();
+            Debug.Log($"[AimingSystem] InputManager.IsTouching(): {touching}");
+            
+            if (touching)
+            {
+                isInputActive = true;
+                screenPos = InputManager.Instance.GetTouchScreenPosition();
+                Debug.Log($"[AimingSystem] Using InputManager - ScreenPos: {screenPos}");
+            }
         }
         else
         {
-            UpdateMouseAiming(); // Fallback for editor/desktop testing
+            Debug.LogWarning("[AimingSystem] InputManager.Instance is NULL!");
+        }
+        
+        // Fallback to direct Mouse input
+        if (!isInputActive && Mouse.current != null)
+        {
+            bool mousePressed = Mouse.current.leftButton.isPressed;
+            Debug.Log($"[AimingSystem] Mouse.leftButton.isPressed: {mousePressed}");
+            
+            if (mousePressed)
+            {
+                isInputActive = true;
+                screenPos = Mouse.current.position.ReadValue();
+                Debug.Log($"[AimingSystem] Using Mouse fallback - ScreenPos: {screenPos}");
+            }
+        }
+        
+        Debug.Log($"[AimingSystem] Final isInputActive: {isInputActive}");
+        
+        // Update aiming if any input is active
+        if (isInputActive)
+        {
+            UpdateAimingFromScreenPosition(screenPos);
         }
 
-        // Update curve input (keep keyboard controls for curve shots)
+        // Update curve input
         UpdateCurveInput();
         
         // Update aim line length with raycast
         UpdateAimLineLength();
     }
     
-    private void UpdateTouchAiming()
+    private void UpdateAimingFromScreenPosition(Vector2 screenPos)
     {
-        Vector2 screenPosition = InputManager.Instance.GetTouchScreenPosition();
-        
-        if (!isDragging)
+        if (mainCam == null || ballTransform == null)
         {
-            // Start tracking touch
-            touchStartPosition = screenPosition;
-            isDragging = true;
+            Debug.LogError("[AimingSystem] MainCam or BallTransform is NULL!");
+            return;
         }
         
-        currentTouchPosition = screenPosition;
+        // Convert screen position to world position using the stored Z depth
+        Vector3 screenPoint = new Vector3(screenPos.x, screenPos.y, gameZDepth);
+        Vector3 mouseWorldPos = mainCam.ScreenToWorldPoint(screenPoint);
         
-        // Calculate direction based on touch drag
-        Vector2 dragVector = currentTouchPosition - touchStartPosition;
+        // For 2D games, ensure Z is the same as the ball
+        mouseWorldPos.z = ballTransform.position.z;
         
-        if (dragVector.magnitude > minTouchDistance)
+        // Calculate direction from ball to mouse world position
+        Vector3 direction = (mouseWorldPos - ballTransform.position);
+        direction.z = 0f;
+        
+        Debug.Log($"[AimingSystem] ScreenPos: {screenPos}, ScreenPoint (with Z): {screenPoint}, MouseWorld: {mouseWorldPos}, Ball: {ballTransform.position}, Direction: {direction}, Magnitude: {direction.magnitude}");
+        
+        if (direction.sqrMagnitude > 0.01f)
         {
-            // Convert screen space drag to world space direction
-            Vector3 ballScreenPos = mainCam.WorldToScreenPoint(ballTransform.position);
-            Vector2 ballScreenPos2D = new Vector2(ballScreenPos.x, ballScreenPos.y);
-            
-            // Calculate aim direction from ball position to touch position
-            Vector2 aimScreenDirection = currentTouchPosition - ballScreenPos2D;
-            
-            // Convert to world space direction
-            Vector3 worldDirection = ConvertScreenToWorldDirection(aimScreenDirection);
-            
-            if (worldDirection != Vector3.zero)
-            {
-                AimDirection = worldDirection.normalized;
-            }
+            AimDirection = direction.normalized;
+            Debug.Log($"[AimingSystem] *** AIM UPDATED *** Direction: {AimDirection}");
         }
-    }
-    
-    private void UpdateMouseAiming()
-    {
-        // Original mouse-based aiming (for desktop testing)
-        if (Mouse.current != null)
+        else
         {
-            Ray camRay = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
-            Plane playerPlane = new Plane(Vector3.forward, ballTransform.position);
-            
-            if (playerPlane.Raycast(camRay, out float hitDistance))
-            {
-                Vector3 mouseWorldPos = camRay.GetPoint(hitDistance);
-                Vector3 direction = (mouseWorldPos - ballTransform.position).normalized;
-                direction = new Vector3(direction.x, direction.y, 0f).normalized;
-                
-                if (direction != Vector3.zero)
-                {
-                    AimDirection = direction;
-                }
-            }
+            Debug.LogWarning($"[AimingSystem] Direction too small - Magnitude: {direction.magnitude}");
         }
-    }
-    
-    private Vector3 ConvertScreenToWorldDirection(Vector2 screenDirection)
-    {
-        // Create a more robust screen-to-world conversion for aiming
-        Vector3 ballScreenPos = mainCam.WorldToScreenPoint(ballTransform.position);
-        Vector3 targetScreenPos = new Vector3(
-            ballScreenPos.x + screenDirection.x, 
-            ballScreenPos.y + screenDirection.y, 
-            ballScreenPos.z
-        );
-        
-        Vector3 targetWorldPos = mainCam.ScreenToWorldPoint(targetScreenPos);
-        Vector3 worldDirection = (targetWorldPos - ballTransform.position);
-        
-        // Ensure direction is on the XY plane (for 2D billiards)
-        worldDirection.z = 0f;
-        
-        return worldDirection;
     }
     
     public void OnTouchEnd()
     {
-        isDragging = false;
+        Debug.Log("[AimingSystem] Touch input ended");
     }
 
     private void UpdateCurveInput()
     {
-        // Keep keyboard controls for curve shots (can be adapted to UI buttons later)
         if (Keyboard.current == null) 
         {
             IsCurveShotActive = false;
@@ -189,19 +185,20 @@ public class AimingSystem
     {
         if (AimDirection == Vector3.zero)
         {
-            AimDirection = Vector3.right; // Default direction
+            AimDirection = Vector3.right;
             CurrentAimLineLength = lineLength;
             return;
         }
         
-        // Raycast to detect obstacles
         if (Physics.Raycast(ballTransform.position, AimDirection, out RaycastHit hit, lineLength, groundLayer))
         {
             CurrentAimLineLength = hit.distance;
+            Debug.DrawLine(ballTransform.position, hit.point, Color.red, 0.1f);
         }
         else
         {
             CurrentAimLineLength = lineLength;
+            Debug.DrawLine(ballTransform.position, ballTransform.position + (AimDirection * lineLength), Color.green, 0.1f);
         }
     }
 
