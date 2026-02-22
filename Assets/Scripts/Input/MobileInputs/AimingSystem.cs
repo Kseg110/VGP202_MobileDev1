@@ -84,9 +84,11 @@ public class AimingSystem
             
             // Calculate direction from ball to mouse position (in XY plane)
             Vector3 direction = mouseWorldPos - ballTransform.position;
-            direction.z = 0f; 
+            direction.z = 0f;
             
-            if (direction.sqrMagnitude > 0.01f)
+            // Check minimum distance threshold
+            float touchDistance = direction.magnitude;
+            if (touchDistance >= minTouchDistance && direction.sqrMagnitude > 0.01f)
             {
                 AimDirection = direction.normalized;
             }

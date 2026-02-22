@@ -23,7 +23,7 @@ public class BilliardController : PhysicsMaterialManager
 
     [Header("UI")]
     [SerializeField] private RadialPowerBar powerBar;
-    [SerializeField] private ShootButton shootButton; // New UI button reference
+    [SerializeField] private ShootButton shootButton; // Can be null, will auto-find
 
     private Rigidbody rb;
     private LineRenderer aimLine;
@@ -31,8 +31,6 @@ public class BilliardController : PhysicsMaterialManager
 
     private bool isCharging;
     private float currentPower;
-    private enum ShootState { Idle, Ready, Charging }
-    private ShootState shootState = ShootState.Idle;
 
     public float PowerPercentage => currentPower / maxPower;
 
@@ -58,7 +56,32 @@ public class BilliardController : PhysicsMaterialManager
         aimingSystem.Initialize(mainCam, transform);
         
         SetupLineRenderer();
+    }
+
+    protected override void Start()
+    {
+        base.Start();
+        ApplyPhysicsMaterial();
+
+        // Find ShootButton if not assigned
+        if (shootButton == null)
+        {
+            shootButton = FindFirstObjectByType<ShootButton>();
+            if (shootButton == null)
+            {
+                Debug.LogWarning("[BilliardController] ShootButton not found in scene!");
+            }
+        }
+        
+        // Setup shoot button connection
         SetupShootButton();
+
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnTouchEnd += OnTouchEnd;
+        }
+        
+        Debug.Log($"[BilliardController] Initialized for {gameObject.name}");
     }
 
     private void SetupShootButton()
@@ -67,21 +90,11 @@ public class BilliardController : PhysicsMaterialManager
         {
             shootButton.OnStartCharging += StartPowerCharging;
             shootButton.OnFireShot += FireShot;
+            Debug.Log($"[BilliardController] Connected to ShootButton");
         }
         else
         {
-            Debug.LogWarning("ShootButton not assigned! Please assign it in the inspector.");
-        }
-    }
-
-    protected override void Start()
-    {
-        base.Start();
-        ApplyPhysicsMaterial();
-
-        if (InputManager.Instance != null)
-        {
-            InputManager.Instance.OnTouchEnd += OnTouchEnd;
+            Debug.LogWarning("[BilliardController] ShootButton not assigned and not found!");
         }
     }
 
@@ -131,16 +144,19 @@ public class BilliardController : PhysicsMaterialManager
 
     private void StartPowerCharging()
     {
-        if (billiardBall.IsBallMoving()) return; // Can't shoot while ball is moving
+        if (billiardBall.IsBallMoving())
+        {
+            Debug.Log("[BilliardController] Can't shoot - ball is moving");
+            return;
+        }
         
         isCharging = true;
         currentPower = 0f;
-        shootState = ShootState.Charging;
         
         if (powerBar != null) 
             powerBar.SetActive(true);
             
-        Debug.Log("Power charging started");
+        Debug.Log("[BilliardController] Power charging started");
     }
     
     private void HandlePowerCharging()
@@ -169,11 +185,15 @@ public class BilliardController : PhysicsMaterialManager
     
     private void FireShot()
     {
-        if (!isCharging) return; // Can only fire when charging
+        if (!isCharging)
+        {
+            Debug.Log("[BilliardController] Can't fire - not charging");
+            return;
+        }
         
         Vector3 baseForce = aimingSystem.AimDirection * currentPower;
         
-        Debug.Log($"Shot fired - Power: {currentPower:F2}");
+        Debug.Log($"[BilliardController] Shot fired - Power: {currentPower:F2}, Direction: {aimingSystem.AimDirection}");
         
         // Apply force with or without curve
         if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
@@ -187,7 +207,6 @@ public class BilliardController : PhysicsMaterialManager
 
         // Reset state
         isCharging = false;
-        shootState = ShootState.Idle;
         currentPower = 0f;
         
         // Hide UI elements
@@ -339,7 +358,7 @@ public class BilliardController : PhysicsMaterialManager
     private void SetupLineRenderer()
     {
         aimLine.positionCount = 2;
-        aimLine.enabled = true; // Make sure it starts enabled for testing
+        aimLine.enabled = true;
         aimLine.startWidth = 0.05f;
         aimLine.endWidth = 0.05f;   
         aimLine.material = new Material(Shader.Find("Sprites/Default"));

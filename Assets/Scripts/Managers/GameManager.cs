@@ -26,6 +26,7 @@ public class GameManager : MonoBehaviour
     #region UI References
     public GameObject gameOverCanvasPrefab;
     private GameObject gameOverCanvasInstance;
+    public GameObject endScenePanel; // Add reference to end scene panel
     #endregion
 
     private AudioSource audioSource;
@@ -93,6 +94,10 @@ public class GameManager : MonoBehaviour
         {
             _instance = this;
             DontDestroyOnLoad(gameObject);
+            
+            // Subscribe to scene loading to spawn player
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            
             return;
         }
 
@@ -100,10 +105,14 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    //void Start()
-    //{
-
-    //}
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Check if this is the game scene (not menu scene)
+        if (scene.buildIndex == 1 || scene.name.Contains("Game")) // Adjust based on your scene setup
+        {
+            SpawnPlayer();
+        }
+    }
 
     private void OnEnable()
     {
@@ -125,6 +134,8 @@ public class GameManager : MonoBehaviour
             InputManager.Instance.OnTouchEnd -= HandleTouchRelease;
             InputManager.Instance.OnPhoneTilt -= HandlePhoneTilt;
         }
+        
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     #region Mobile Input Handlers
@@ -212,10 +223,93 @@ public class GameManager : MonoBehaviour
 
     private void GameOver()
     {
-        SceneManager.LoadScene(0);
+        // Show end scene panel if available
+        if (endScenePanel != null)
+        {
+            endScenePanel.SetActive(true);
+        }
+        else
+        {
+            // Fallback to loading menu scene
+            SceneManager.LoadScene(0);
+        }
     }
 
     public Transform spawnPoint; 
+    
+    private void SpawnPlayer()
+    {
+        // Don't spawn if player already exists
+        if (_playerInstance != null)
+        {
+            Debug.LogWarning("[GameManager] Player already exists, not spawning again.");
+            return;
+        }
+
+        if (playerPrefab == null)
+        {
+            Debug.LogError("[GameManager] Player prefab not assigned!");
+            return;
+        }
+
+        // Find spawn point if not assigned
+        if (spawnPoint == null)
+        {
+            GameObject spawnObj = GameObject.Find("PlayerSpawnPoint");
+            if (spawnObj != null)
+            {
+                spawnPoint = spawnObj.transform;
+            }
+            else
+            {
+                Debug.LogWarning("[GameManager] No spawn point found, using default position.");
+                spawnPoint = null;
+            }
+        }
+
+        // Instantiate player
+        Vector3 spawnPos = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+        Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
+        
+        _playerInstance = Instantiate(playerPrefab, spawnPos, spawnRot);
+        _playerInstance.gameObject.name = "Player"; // Remove (Clone) suffix
+        
+        // Notify listeners
+        OnPlayerControllerCreated?.Invoke(_playerInstance);
+        
+        Debug.Log($"[GameManager] Player spawned at {spawnPos}");
+    }
+
+    public void RespawnPlayer(Vector3 position)
+    {
+        if (_playerInstance != null)
+        {
+            _playerInstance.transform.position = position;
+            
+            // Reset rigidbody
+            Rigidbody rb = _playerInstance.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+            
+            // Reset ball state
+            BilliardBall ball = _playerInstance.GetComponent<BilliardBall>();
+            if (ball != null)
+            {
+                ball.currentSideSpin = 0f;
+            }
+            
+            Debug.Log($"[GameManager] Player respawned at {position}");
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] Cannot respawn - player instance is null!");
+            SpawnPlayer(); // Try to spawn if missing
+        }
+    }
+
     public void SetLoadFromCheckpoint(bool value)
     {
         PlayerPrefs.SetInt("LoadFromCheckpoint", value ? 1 : 0);
@@ -258,6 +352,21 @@ public class GameManager : MonoBehaviour
 
     public void PlayerDied()
     {
-        SceneManager.LoadScene("EndScene");
+        // Clean up player instance
+        if (_playerInstance != null)
+        {
+            Destroy(_playerInstance.gameObject);
+            _playerInstance = null;
+        }
+        
+        // Show end screen or load end scene
+        if (endScenePanel != null)
+        {
+            endScenePanel.SetActive(true);
+        }
+        else
+        {
+            SceneManager.LoadScene("EndScene");
+        }
     }
 }

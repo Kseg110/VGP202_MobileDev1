@@ -18,6 +18,8 @@ public class ShootButton : MonoBehaviour
     
     public bool IsCharging { get; private set; }
     
+    private BilliardController currentPlayer;
+    
     private void Awake()
     {
         if (shootButton == null)
@@ -31,6 +33,33 @@ public class ShootButton : MonoBehaviour
     {
         shootButton.onClick.AddListener(HandleButtonClick);
         SetIdleState();
+        
+        // Subscribe to GameManager player spawn event
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.OnPlayerControllerCreated += ConnectToPlayer;
+            
+            // Check if player already exists
+            if (GameManager.Instance.PlayerInstance != null)
+            {
+                ConnectToPlayer(GameManager.Instance.PlayerInstance);
+            }
+        }
+    }
+    
+    private void ConnectToPlayer(BilliardController player)
+    {
+        // Disconnect from old player if exists
+        if (currentPlayer != null)
+        {
+            OnStartCharging = null;
+            OnFireShot = null;
+        }
+        
+        currentPlayer = player;
+        
+        // The player will subscribe to our events in its SetupShootButton method
+        Debug.Log($"[ShootButton] Connected to player: {player.gameObject.name}");
     }
     
     private void HandleButtonClick()
@@ -50,7 +79,7 @@ public class ShootButton : MonoBehaviour
         IsCharging = true;
         SetChargingState();
         OnStartCharging?.Invoke();
-        Debug.Log("Shoot Button: Started charging");
+        Debug.Log("[ShootButton] Started charging");
     }
     
     private void FireShot()
@@ -58,7 +87,7 @@ public class ShootButton : MonoBehaviour
         IsCharging = false;
         SetIdleState();
         OnFireShot?.Invoke();
-        Debug.Log("Shoot Button: Fired shot");
+        Debug.Log("[ShootButton] Fired shot");
     }
     
     public void SetIdleState()
@@ -84,5 +113,10 @@ public class ShootButton : MonoBehaviour
     {
         if (shootButton != null)
             shootButton.onClick.RemoveListener(HandleButtonClick);
+            
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.OnPlayerControllerCreated -= ConnectToPlayer;
+        }
     }
 }
