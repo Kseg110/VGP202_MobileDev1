@@ -11,14 +11,12 @@ public class CanvasManager : MonoBehaviour
     public Button settingsButton;
     public Button backButton;
     public Button quitButton;
-    public Button pauseButton; // Added PauseButton reference
+    public Button pauseButton;
 
     public Button resumeGame;
     public Button returnToMenu;
-    //public Button continueGameButton;
     public Button endSceneRestartGameButton;
     public Button endSceneReturnToMenuButton;
-
 
     [Header("Panels")]
     public GameObject mainMenuPanel;
@@ -32,19 +30,16 @@ public class CanvasManager : MonoBehaviour
     public TMP_Text levelText;
     public TMP_Text coinsText;
 
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        // Bind serialized references (useful if this object is DontDestroyOnLoad and UI is scene-local)
-        BindReferences();
-        SetupBindings();
+        FindPanels();
+        SetupAllButtons();
         Debug.Log("[CanvasManager] Start completed.");
     }
 
     private void OnEnable()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded; // defensive
+        SceneManager.sceneLoaded -= OnSceneLoaded;
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
@@ -55,43 +50,13 @@ public class CanvasManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Re-bind references when a new scene loads (UI elements are usually scene local and get destroyed)
-        BindReferences();
-        SetupBindings();
+        FindPanels();
+        SetupAllButtons();
         Debug.Log($"[CanvasManager] SceneLoaded: {scene.name} - re-bound UI references.");
     }
 
-    private void BindReferences()
+    private void FindPanels()
     {
-        // Force re-search for buttons if they're null or destroyed
-        if (playButton == null || !playButton.gameObject.activeInHierarchy)
-            playButton = GameObject.Find("PlayButton")?.GetComponent<Button>();
-        
-        if (settingsButton == null || !settingsButton.gameObject.activeInHierarchy)
-            settingsButton = GameObject.Find("SettingsButton")?.GetComponent<Button>();
-        
-        if (backButton == null || !backButton.gameObject.activeInHierarchy)
-            backButton = GameObject.Find("BackButton")?.GetComponent<Button>();
-        
-        if (quitButton == null || !quitButton.gameObject.activeInHierarchy)
-            quitButton = GameObject.Find("QuitButton")?.GetComponent<Button>();
-        
-        if (pauseButton == null || !pauseButton.gameObject.activeInHierarchy)
-            pauseButton = GameObject.Find("PauseButton")?.GetComponent<Button>();
-
-        if (resumeGame == null || !resumeGame.gameObject.activeInHierarchy)
-            resumeGame = GameObject.Find("ResumeButton")?.GetComponent<Button>();
-        
-        if (returnToMenu == null || !returnToMenu.gameObject.activeInHierarchy)
-            returnToMenu = GameObject.Find("ReturnToMenuButton")?.GetComponent<Button>();
-        
-        if (endSceneRestartGameButton == null || !endSceneRestartGameButton.gameObject.activeInHierarchy)
-            endSceneRestartGameButton = GameObject.Find("RestartButton")?.GetComponent<Button>();
-        
-        if (endSceneReturnToMenuButton == null || !endSceneReturnToMenuButton.gameObject.activeInHierarchy)
-            endSceneReturnToMenuButton = GameObject.Find("EndSceneReturnToMenuButton")?.GetComponent<Button>();
-
-        // Panels
         if (mainMenuPanel == null)
             mainMenuPanel = GameObject.Find("Menu");
         
@@ -104,7 +69,6 @@ public class CanvasManager : MonoBehaviour
         if (endScene == null)
             endScene = GameObject.Find("EndScenePannel");
 
-        // Text elements
         if (livesText == null)
             livesText = GameObject.Find("LivesText")?.GetComponent<TMP_Text>();
         
@@ -117,129 +81,150 @@ public class CanvasManager : MonoBehaviour
         if (coinsText == null)
             coinsText = GameObject.Find("CoinsText")?.GetComponent<TMP_Text>();
 
-        Debug.Log($"[CanvasManager] BindReferences results: playButton={(playButton != null ? playButton.name : "null")}, settingsButton={(settingsButton != null ? settingsButton.name : "null")}, quitButton={(quitButton != null ? quitButton.name : "null")}, endSceneReturnToMenuButton={(endSceneReturnToMenuButton != null ? endSceneReturnToMenuButton.name : "null")}");
+        if (livesText != null && GameManager.Instance != null)
+        {
+            livesText.text = $"Lives: {GameManager.Instance.lives}";
+            GameManager.Instance.OnLivesChanged -= OnLivesChangedHandler;
+            GameManager.Instance.OnLivesChanged += OnLivesChangedHandler;
+        }
     }
 
-    private void SetupBindings()
+    private void SetupAllButtons()
     {
-        // Get current scene to determine what UI should exist
-        string currentScene = SceneManager.GetActiveScene().name;
-        
-        // Buttons: remove old listeners to avoid duplicates and re-wire
+        // Setup main menu buttons (these should be assigned in Inspector)
         if (playButton != null)
         {
-            Debug.Log($"[CanvasManager] Setting up playButton - Button component exists: {playButton != null}, GameObject active: {playButton.gameObject.activeInHierarchy}, Interactable: {playButton.interactable}");
             playButton.onClick.RemoveAllListeners();
             playButton.onClick.AddListener(NewGame);
-            Debug.Log("[CanvasManager] playButton listener added.");
+            Debug.Log("[CanvasManager] PlayButton listener added");
+        }
+        else
+        {
+            Debug.LogWarning("[CanvasManager] PlayButton is NULL!");
         }
 
         if (settingsButton != null)
         {
             settingsButton.onClick.RemoveAllListeners();
-            settingsButton.onClick.AddListener(() => { SetMenus(settingsPanel, mainMenuPanel); Debug.Log("[CanvasManager] SettingsButton clicked"); });
-            Debug.Log("[CanvasManager] settingsButton listener added.");
+            settingsButton.onClick.AddListener(OpenSettings);
+            Debug.Log("[CanvasManager] SettingsButton listener added");
         }
-
-        if (backButton != null)
+        else
         {
-            backButton.onClick.RemoveAllListeners();
-            backButton.onClick.AddListener(() => { SetMenus(mainMenuPanel, settingsPanel); Debug.Log("[CanvasManager] BackButton clicked"); });
-            Debug.Log("[CanvasManager] backButton listener added.");
+            Debug.LogWarning("[CanvasManager] SettingsButton is NULL!");
         }
 
         if (quitButton != null)
         {
             quitButton.onClick.RemoveAllListeners();
             quitButton.onClick.AddListener(QuitGame);
-            Debug.Log("[CanvasManager] quitButton listener added.");
+            Debug.Log("[CanvasManager] QuitButton listener added");
         }
-
-        // Wire pauseButton to toggle the pause panel (same behavior as right-click)
-        if (pauseButton != null)
+        else
         {
-            pauseButton.onClick.RemoveAllListeners();
-            pauseButton.onClick.AddListener(() =>
-            {
-                if (pauseMenuPanel == null) return;
-
-                if (pauseMenuPanel.activeSelf)
-                {
-                    SetMenus(null, pauseMenuPanel);
-                    ResumeGame();
-                }
-                else
-                {
-                    SetMenus(pauseMenuPanel, null);
-                    PauseGame();
-                }
-            });
-            Debug.Log("[CanvasManager] pauseButton listener added.");
+            Debug.LogWarning("[CanvasManager] QuitButton is NULL!");
         }
 
+        // Setup settings button (if assigned in Inspector)
+        if (backButton != null)
+        {
+            backButton.onClick.RemoveAllListeners();
+            backButton.onClick.AddListener(CloseSettings);
+            Debug.Log("[CanvasManager] BackButton listener added");
+        }
+
+        // Setup pause buttons (if assigned in Inspector)
         if (resumeGame != null)
         {
             resumeGame.onClick.RemoveAllListeners();
             resumeGame.onClick.AddListener(() => { SetMenus(null, pauseMenuPanel); ResumeGame(); });
-            Debug.Log("[CanvasManager] resumeGame listener added.");
+            Debug.Log("[CanvasManager] ResumeButton listener added");
         }
 
-        if (returnToMenu != null)
+        if (pauseButton != null)
         {
-            returnToMenu.onClick.RemoveAllListeners();
-            returnToMenu.onClick.AddListener(ReturnToMenu);
-            Debug.Log("[CanvasManager] returnToMenu listener added.");
+            pauseButton.onClick.RemoveAllListeners();
+            pauseButton.onClick.AddListener(TogglePause);
+            Debug.Log("[CanvasManager] PauseButton listener added");
         }
 
+        // Setup end scene buttons (if assigned in Inspector)
         if (endSceneRestartGameButton != null)
         {
             endSceneRestartGameButton.onClick.RemoveAllListeners();
             endSceneRestartGameButton.onClick.AddListener(NewGame);
-            Debug.Log("[CanvasManager] endSceneRestartGameButton listener added.");
+            Debug.Log("[CanvasManager] RestartButton listener added");
         }
 
         if (endSceneReturnToMenuButton != null)
         {
             endSceneReturnToMenuButton.onClick.RemoveAllListeners();
             endSceneReturnToMenuButton.onClick.AddListener(ReturnToMenu);
-            Debug.Log("[CanvasManager] endSceneReturnToMenuButton listener added.");
+            Debug.Log("[CanvasManager] EndSceneReturnToMenuButton listener added");
         }
+    }
 
-        // Lives text hookup (safe subscribe)
-        if (livesText != null && GameManager.Instance != null)
-        {
-            livesText.text = $"Lives: {GameManager.Instance.lives}";
-            GameManager.Instance.OnLivesChanged -= OnLivesChangedHandler;
-            GameManager.Instance.OnLivesChanged += OnLivesChangedHandler;
-            Debug.Log("[CanvasManager] livesText hookup complete.");
-        }
+    void OpenSettings()
+    {
+        Debug.Log("[CanvasManager] OpenSettings called!");
+        SetMenus(settingsPanel, mainMenuPanel);
+    }
+
+    void CloseSettings()
+    {
+        Debug.Log("[CanvasManager] CloseSettings called!");
+        SetMenus(mainMenuPanel, settingsPanel);
+    }
+
+    void TogglePause()
+    {
+        Debug.Log("[CanvasManager] TogglePause called!");
         
-#if UNITY_EDITOR
-        Debug.Log($"[CanvasManager] SetupBindings complete for scene: {currentScene}");
-#endif
+        if (pauseMenuPanel == null) return;
+
+        if (pauseMenuPanel.activeSelf)
+        {
+            SetMenus(null, pauseMenuPanel);
+            ResumeGame();
+        }
+        else
+        {
+            SetMenus(pauseMenuPanel, null);
+            PauseGame();
+        }
     }
 
     void SetMenus(GameObject menuToActivate, GameObject menuToDeactivate)
     {
-        if (menuToActivate) menuToActivate.SetActive(true);
-        if (menuToDeactivate) menuToDeactivate.SetActive(false);
-        // No cursor logic here!
+        if (menuToDeactivate) 
+        {
+            menuToDeactivate.SetActive(false);
+            Debug.Log("[CanvasManager] Deactivated: " + menuToDeactivate.name);
+        }
+        
+        if (menuToActivate) 
+        {
+            menuToActivate.SetActive(true);
+            Debug.Log("[CanvasManager] Activated: " + menuToActivate.name);
+        }
     }
 
     void ResumeGame()
     {
         Time.timeScale = 1f;
-        //Cursor.visible = false;
+        Debug.Log("[CanvasManager] Game Resumed");
     }
 
     void PauseGame()
     {
         Time.timeScale = 0f;
+        Debug.Log("[CanvasManager] Game Paused");
     }
 
     void ReturnToMenu()
     {
-        Time.timeScale = 1f; // Unpause before switching scenes
+        Debug.Log("[CanvasManager] Returning to Menu");
+        Time.timeScale = 1f;
         SceneManager.LoadScene(0);
     }
 
@@ -260,7 +245,6 @@ public class CanvasManager : MonoBehaviour
     {
         Debug.Log("[CanvasManager] NewGame invoked.");
         
-        // Only call GameManager if it exists
         if (GameManager.Instance != null)
         {
             GameManager.Instance.SetLoadFromCheckpoint(false);
@@ -270,26 +254,15 @@ public class CanvasManager : MonoBehaviour
         SceneManager.LoadScene(1); 
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (!pauseMenuPanel) return;
 
-        // Use right mouse button to toggle pause for desktop testing (no keyboard required).
         if (Mouse.current != null)
         {
             if (Mouse.current.rightButton.wasPressedThisFrame)
             {
-                if (pauseMenuPanel.activeSelf)
-                {
-                    SetMenus(null, pauseMenuPanel);
-                    ResumeGame();
-                }
-                else
-                {
-                    SetMenus(pauseMenuPanel, null);
-                    PauseGame();
-                }
+                TogglePause();
             }
         }
     }
@@ -299,10 +272,4 @@ public class CanvasManager : MonoBehaviour
         if (livesText != null)
             livesText.text = $"Lives: {lives}";
     }
-
-    //private void OnScoreChangedHandler(int score)
-    //{
-    //    if (coinsText != null)
-    //        coinsText.text = $"Gold: {score}";
-    //}
 }
