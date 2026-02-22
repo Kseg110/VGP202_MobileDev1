@@ -1080,9 +1080,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameCanvasManager
   hudPanel: {fileID: 1791865753}
-  livesText: {fileID: 6188640528026953688, guid: 856d331bdf5f66948b9c7d47475cc6f7, type: 3}
-  shotsText: {fileID: 7410379264181451434, guid: ab61579de6d8b35459273a92c54d6576, type: 3}
-  levelText: {fileID: 1231424679163810463, guid: 1fb3ff76c1036524680d3044cd26b311, type: 3}
+  livesText: {fileID: 1791865756}
+  shotsText: {fileID: 1791865755}
+  levelText: {fileID: 1791865754}
   coinsText: {fileID: 5329530708625284404, guid: 78cc2dd5d736efd4d8b3bdb8788ad7a9, type: 3}
   pauseButton: {fileID: 1791865751}
   shootButton: {fileID: 1791865752}
@@ -2190,6 +2190,39 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 4707825779276283448, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
   m_PrefabInstance: {fileID: 1791865750}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1791865754 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7773387731262933053, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
+  m_PrefabInstance: {fileID: 1791865750}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &1791865755 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2096217925617439878, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
+  m_PrefabInstance: {fileID: 1791865750}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &1791865756 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5623940865451651932, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
+  m_PrefabInstance: {fileID: 1791865750}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!114 &1878585382 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4925345906689786507, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}

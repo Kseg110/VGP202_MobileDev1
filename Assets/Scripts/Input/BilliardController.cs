@@ -23,7 +23,7 @@ public class BilliardController : PhysicsMaterialManager
 
     [Header("UI")]
     [SerializeField] private RadialPowerBar powerBar;
-    [SerializeField] private ShootButton shootButton; // Can be null, will auto-find
+    [SerializeField] private ShootButton shootButton;
 
     private Rigidbody rb;
     private LineRenderer aimLine;
@@ -205,6 +205,13 @@ public class BilliardController : PhysicsMaterialManager
             billiardBall.ApplyForce(baseForce);
         }
 
+        // Decrement shots in GameManager
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Shots--;
+            Debug.Log($"[BilliardController] Shots remaining: {GameManager.Instance.Shots}");
+        }
+
         // Reset state
         isCharging = false;
         currentPower = 0f;
@@ -230,6 +237,12 @@ public class BilliardController : PhysicsMaterialManager
     {
         Vector3 force = new Vector3(velocity.x, velocity.y, 0);
         billiardBall.ApplyForce(force);
+
+        // Decrement shots
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Shots--;
+        }
 
         aimLine.enabled = false;
         arrowIndicator.gameObject.SetActive(false);

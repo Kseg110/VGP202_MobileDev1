@@ -26,12 +26,15 @@ public class GameManager : MonoBehaviour
     #region UI References
     public GameObject gameOverCanvasPrefab;
     private GameObject gameOverCanvasInstance;
-    public GameObject endScenePanel; // Add reference to end scene panel
+    public GameObject endScenePanel;
     #endregion
 
     private AudioSource audioSource;
 
+    // Events for UI updates
     public event Action<int> OnLivesChanged;
+    public event Action<int> OnShotsChanged;
+    public event Action<int> OnRoundsChanged;
     //public event Action<int> OnScoreChanged;
 
     #region Stats
@@ -74,13 +77,23 @@ public class GameManager : MonoBehaviour
     public int Shots
     {
         get => _shots;
-        set => _shots = value;
+        set
+        {
+            _shots = value;
+            OnShotsChanged?.Invoke(_shots);
+            Debug.Log($"Shots: {_shots}");
+        }
     }
 
     public int Rounds
     {
         get => _rounds;
-        set => _rounds = value;
+        set
+        {
+            _rounds = value;
+            OnRoundsChanged?.Invoke(_rounds);
+            Debug.Log($"Rounds/Level: {_rounds}");
+        }
     }
     #endregion
 
@@ -108,7 +121,7 @@ public class GameManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         // Check if this is the game scene (not menu scene)
-        if (scene.buildIndex == 1 || scene.name.Contains("Game")) // Adjust based on your scene setup
+        if (scene.buildIndex == 1 || scene.name.Contains("Game"))
         {
             SpawnPlayer();
         }
@@ -168,8 +181,6 @@ public class GameManager : MonoBehaviour
 
         // Ensure there is always one AudioListener in the scene
         EnsureAudioListener();
-
-        // Debug keys removed - rely on mouse for desktop testing and InputManager for mobile.
     }
 
     private void HandleMobileBackButton()
@@ -272,7 +283,7 @@ public class GameManager : MonoBehaviour
         Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
         
         _playerInstance = Instantiate(playerPrefab, spawnPos, spawnRot);
-        _playerInstance.gameObject.name = "Player"; // Remove (Clone) suffix
+        _playerInstance.gameObject.name = "Player";
         
         // Notify listeners
         OnPlayerControllerCreated?.Invoke(_playerInstance);
@@ -306,7 +317,7 @@ public class GameManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[GameManager] Cannot respawn - player instance is null!");
-            SpawnPlayer(); // Try to spawn if missing
+            SpawnPlayer();
         }
     }
 

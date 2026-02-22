@@ -23,61 +23,23 @@ public class GameCanvasManager : MonoBehaviour
     public Button returnToMenuButton;
     public Button restartButton;
 
+    private bool isInitialized = false;
+
     void Start()
     {
         SetupButtons();
-        InitializeHUD();
-        Debug.Log("[GameCanvasManager] Start completed.");
-    }
-
-    private void SetupButtons()
-    {
-        if (pauseButton != null)
-        {
-            pauseButton.onClick.RemoveAllListeners();
-            pauseButton.onClick.AddListener(TogglePause);
-            Debug.Log("[GameCanvasManager] PauseButton listener added");
-        }
-
-        if (resumeButton != null)
-        {
-            resumeButton.onClick.RemoveAllListeners();
-            resumeButton.onClick.AddListener(ResumeGame);
-            Debug.Log("[GameCanvasManager] ResumeButton listener added");
-        }
-
-        if (returnToMenuButton != null)
-        {
-            returnToMenuButton.onClick.RemoveAllListeners();
-            returnToMenuButton.onClick.AddListener(ReturnToMenu);
-            Debug.Log("[GameCanvasManager] ReturnToMenuButton listener added");
-        }
-
-        if (restartButton != null)
-        {
-            restartButton.onClick.RemoveAllListeners();
-            restartButton.onClick.AddListener(RestartGame);
-            Debug.Log("[GameCanvasManager] RestartButton listener added");
-        }
-    }
-
-    private void InitializeHUD()
-    {
-        if (GameManager.Instance != null)
-        {
-            UpdateLives(GameManager.Instance.Lives);
-            GameManager.Instance.OnLivesChanged -= UpdateLives;
-            GameManager.Instance.OnLivesChanged += UpdateLives;
-        }
-
-        if (pauseMenuPanel != null)
-        {
-            pauseMenuPanel.SetActive(false);
-        }
+        // Delay initialization to ensure GameManager is ready
+        Invoke(nameof(InitializeHUD), 0.1f);
     }
 
     void Update()
     {
+        // Try to initialize if not yet done
+        if (!isInitialized && GameManager.Instance != null)
+        {
+            InitializeHUD();
+        }
+        
         // Right-click or ESC to pause
         if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
         {
@@ -87,6 +49,68 @@ public class GameCanvasManager : MonoBehaviour
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             TogglePause();
+        }
+    }
+
+    private void SetupButtons()
+    {
+        if (pauseButton != null)
+        {
+            pauseButton.onClick.RemoveAllListeners();
+            pauseButton.onClick.AddListener(TogglePause);
+        }
+
+        if (resumeButton != null)
+        {
+            resumeButton.onClick.RemoveAllListeners();
+            resumeButton.onClick.AddListener(ResumeGame);
+        }
+
+        if (returnToMenuButton != null)
+        {
+            returnToMenuButton.onClick.RemoveAllListeners();
+            returnToMenuButton.onClick.AddListener(ReturnToMenu);
+        }
+
+        if (restartButton != null)
+        {
+            restartButton.onClick.RemoveAllListeners();
+            restartButton.onClick.AddListener(RestartGame);
+        }
+    }
+
+    private void InitializeHUD()
+    {
+        if (isInitialized) return;
+        
+        if (GameManager.Instance != null)
+        {
+            // Initialize all HUD elements with current values
+            UpdateLives(GameManager.Instance.Lives);
+            UpdateShots(GameManager.Instance.Shots);
+            UpdateLevel(GameManager.Instance.Rounds);
+            
+            // Unsubscribe first to prevent duplicates
+            GameManager.Instance.OnLivesChanged -= UpdateLives;
+            GameManager.Instance.OnShotsChanged -= UpdateShots;
+            GameManager.Instance.OnRoundsChanged -= UpdateLevel;
+            
+            // Subscribe to all events
+            GameManager.Instance.OnLivesChanged += UpdateLives;
+            GameManager.Instance.OnShotsChanged += UpdateShots;
+            GameManager.Instance.OnRoundsChanged += UpdateLevel;
+            
+            isInitialized = true;
+            Debug.Log($"[GameCanvasManager] HUD Initialized - Lives: {GameManager.Instance.Lives}, Shots: {GameManager.Instance.Shots}, Level: {GameManager.Instance.Rounds}");
+        }
+        else
+        {
+            Debug.LogWarning("[GameCanvasManager] GameManager instance not found! Will retry...");
+        }
+
+        if (pauseMenuPanel != null)
+        {
+            pauseMenuPanel.SetActive(false);
         }
     }
 
@@ -128,6 +152,15 @@ public class GameCanvasManager : MonoBehaviour
     {
         Time.timeScale = 1f;
         Debug.Log("[GameCanvasManager] Returning to Menu");
+        
+        // Reset GameManager values for next game
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.Lives = GameManager.Instance.maxLives;
+            GameManager.Instance.Shots = 10;
+            GameManager.Instance.Rounds = 0;
+        }
+        
         SceneManager.LoadScene(0);
     }
 
@@ -139,6 +172,11 @@ public class GameCanvasManager : MonoBehaviour
         if (GameManager.Instance != null)
         {
             GameManager.Instance.SetLoadFromCheckpoint(false);
+            
+            // Reset stats
+            GameManager.Instance.Lives = GameManager.Instance.maxLives;
+            GameManager.Instance.Shots = 10;
+            GameManager.Instance.Rounds = 0;
         }
         
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
@@ -148,19 +186,26 @@ public class GameCanvasManager : MonoBehaviour
     {
         if (livesText != null)
         {
-            livesText.text = $"Lives: {lives}";
+            // Use SetText to avoid allocations and ForceMeshUpdate to ensure TMP rebuilds the mesh immediately.
+            livesText.SetText("Lives: {0}", lives);
+            livesText.ForceMeshUpdate();
+
+            Debug.Log($"[GameCanvasManager] Lives updated to: {lives} -> written to '{livesText.gameObject.name}', Font='{livesText.font?.name}', Text='{livesText.text}'");
         }
     }
 
-    public void UpdateShots(int shots)
+    private void UpdateShots(int shots)
     {
         if (shotsText != null)
         {
-            shotsText.text = $"Shots: {shots}";
+            shotsText.SetText("Shots: {0}", shots);
+            shotsText.ForceMeshUpdate();
+
+            Debug.Log($"[GameCanvasManager] Shots updated to: {shots} -> written to '{shotsText.gameObject.name}', Font='{shotsText.font?.name}', Text='{shotsText.text}'");
         }
     }
 
-    public void UpdateLevel(int level)
+    private void UpdateLevel(int level)
     {
         if (levelText != null)
         {
@@ -181,6 +226,8 @@ public class GameCanvasManager : MonoBehaviour
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnLivesChanged -= UpdateLives;
+            GameManager.Instance.OnShotsChanged -= UpdateShots;
+            GameManager.Instance.OnRoundsChanged -= UpdateLevel;
         }
     }
 }
