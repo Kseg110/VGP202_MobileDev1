@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
+using UnityEngine.InputSystem;
 
 public class CanvasManager : MonoBehaviour
 {
@@ -59,7 +60,7 @@ public class CanvasManager : MonoBehaviour
         //    GameManager.Instance.OnScoreChanged -= OnScoreChangedHandler;
         //    GameManager.Instance.OnScoreChanged += OnScoreChangedHandler;
         //}
-
+    }
 
     void SetMenus(GameObject menuToActivate, GameObject menuToDeactivate)
     {
@@ -105,18 +106,15 @@ public class CanvasManager : MonoBehaviour
         SceneManager.LoadScene(1); 
     }
 
-    //void LoadGame()
-    //{
-    //    GameManager.Instance.SetLoadFromCheckpoint(true);
-    //    SceneManager.LoadScene(1);
-    //}
-
     // Update is called once per frame
     void Update()
-        {
-            if (!pauseMenuPanel) return;
+    {
+        if (!pauseMenuPanel) return;
 
-            if (Input.GetKeyDown(KeyCode.P))
+        // Use right mouse button to toggle pause for desktop testing (no keyboard required).
+        if (Mouse.current != null)
+        {
+            if (Mouse.current.rightButton.wasPressedThisFrame)
             {
                 if (pauseMenuPanel.activeSelf)
                 {

@@ -6,7 +6,6 @@ using System;
 using UnityEngine.Events;
 using UnityEditor;
 using UnityEngine.Audio;
-using UnityEngine.InputSystem;
 
 [DefaultExecutionOrder(-10)]
 public class GameManager : MonoBehaviour
@@ -159,10 +158,7 @@ public class GameManager : MonoBehaviour
         // Ensure there is always one AudioListener in the scene
         EnsureAudioListener();
 
-        // Handle debug keys only in editor/development builds
-        #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        HandleDebugKeys();
-        #endif
+        // Debug keys removed - rely on mouse for desktop testing and InputManager for mobile.
     }
 
     private void HandleMobileBackButton()
@@ -188,23 +184,6 @@ public class GameManager : MonoBehaviour
         {
             // In game, return to menu
             SceneManager.LoadScene(0);
-        }
-    }
-
-    private void HandleDebugKeys()
-    {
-        // Debug keys only for development
-        if (Keyboard.current != null)
-        {
-            if (Keyboard.current.rKey.wasPressedThisFrame)
-            {
-                lives--; // Debug life loss
-            }
-            
-            if (Keyboard.current.pKey.wasPressedThisFrame)
-            {
-                TogglePause();
-            }
         }
     }
 
