@@ -52,13 +52,11 @@ public class GameManager : MonoBehaviour
         {
             if (value <= 0)
             {
-                Debug.Log("Game Over!");
                 GameOver();
                 _lives = 0;
             }
             else if (value < _lives)
             {
-                Debug.Log("Ouch! You lost a life");
                 _lives = value;
             }
             else if (value > maxLives)
@@ -69,7 +67,6 @@ public class GameManager : MonoBehaviour
             {
                 _lives = value;
             }
-            Debug.Log($"Lives: {_lives}");
             OnLivesChanged?.Invoke(_lives);
         }
     }
@@ -81,7 +78,6 @@ public class GameManager : MonoBehaviour
         {
             _shots = value;
             OnShotsChanged?.Invoke(_shots);
-            Debug.Log($"Shots: {_shots}");
         }
     }
 
@@ -92,7 +88,6 @@ public class GameManager : MonoBehaviour
         {
             _rounds = value;
             OnRoundsChanged?.Invoke(_rounds);
-            Debug.Log($"Rounds/Level: {_rounds}");
         }
     }
     #endregion
@@ -154,20 +149,17 @@ public class GameManager : MonoBehaviour
     #region Mobile Input Handlers
     private void HandleTouchInput()
     {
-        // Handle touch began - could be used for game mechanics
-        Debug.Log("Touch detected");
+        // Reserved for gameplay usage; logging removed.
     }
 
     private void HandleTouchRelease()
     {
-        // Handle touch release - could be used for game mechanics
-        Debug.Log("Touch released");
+        // Reserved for gameplay usage; logging removed.
     }
 
     private void HandlePhoneTilt(Vector3 tiltData)
     {
         // Handle phone tilt - could be used for game mechanics
-        // This is great for mobile billiards games!
     }
     #endregion
 
@@ -323,7 +315,6 @@ public class GameManager : MonoBehaviour
     public void WinGame()
     {
         winCheck = true;
-        Debug.Log("You WIN!");
         SceneManager.sceneLoaded += OnMenuSceneLoaded;
         SceneManager.LoadScene("Menu");
     }

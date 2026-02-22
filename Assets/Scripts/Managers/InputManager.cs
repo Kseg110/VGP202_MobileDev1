@@ -25,9 +25,6 @@ public class InputManager : MonoBehaviour
     [Tooltip("If true, the InputManager will try to find an AimInputArea in each loaded scene.")]
     [SerializeField] private bool autoFindAimInputArea = true;
 
-    [Header("Debug")]
-    [SerializeField] private bool debugInputManager = false;
-
     private Camera cachedMainCamera;
 
     // Deferred processing flags and positions (avoid calling EventSystem API inside InputAction callbacks)
@@ -50,10 +47,8 @@ public class InputManager : MonoBehaviour
 
         input = new PlayerControls();
 
-        // initial cache (will be refreshed on scene load)
         cachedMainCamera = Camera.main;
 
-        // attempt to auto-find the AimInputArea by name if not assigned in inspector
         if (aimInputArea == null)
         {
             TryFindAimInputAreaInScene();
@@ -99,9 +94,6 @@ public class InputManager : MonoBehaviour
         // Refresh camera reference (Camera.main may change after load)
         cachedMainCamera = Camera.main;
 
-        if (debugInputManager)
-            Debug.Log($"[InputManager] SceneLoaded: {scene.name}. MainCamera={(cachedMainCamera? cachedMainCamera.name : "null")}");
-
         // If owner-assigned collider is invalid or belongs to a different scene, try to re-resolve it.
         bool needResolve = false;
         if (aimInputArea == null)
@@ -129,7 +121,6 @@ public class InputManager : MonoBehaviour
     public void SetAimInputArea(Collider2D collider)
     {
         aimInputArea = collider;
-        if (debugInputManager);
     }
 
     private void TryFindAimInputAreaInScene()
@@ -150,7 +141,6 @@ public class InputManager : MonoBehaviour
                 if (c != null)
                 {
                     aimInputArea = c;
-                    if (debugInputManager);
                     return;
                 }
             }
@@ -163,7 +153,6 @@ public class InputManager : MonoBehaviour
             if (c != null)
             {
                 aimInputArea = c;
-                if (debugInputManager);
             }
         }
     }
@@ -300,7 +289,6 @@ public class InputManager : MonoBehaviour
 
             bool overUI = IsPointerOverUIAtPosition(pos);
             bool inside = IsScreenPositionWithinAimArea(pos);
-            if (debugInputManager);
             if (!overUI && inside)
             {
                 OnTouchBegin?.Invoke();
@@ -315,7 +303,6 @@ public class InputManager : MonoBehaviour
 
             bool overUI = IsPointerOverUIAtPosition(pos);
             bool inside = IsScreenPositionWithinAimArea(pos);
-            if (debugInputManager);
             if (!overUI && inside)
             {
                 OnTouchEnd?.Invoke();
@@ -362,10 +349,9 @@ public class InputManager : MonoBehaviour
             position = screenPos
         };
 
-        List<RaycastResult> results = new List <RaycastResult>();
+        List<RaycastResult> results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(pdata, results);
         bool isOver = results != null && results.Count > 0;
-        if (debugInputManager && isOver) Debug.Log($"[InputManager] UI Raycast hit {results.Count} at {screenPos}");
         return isOver;
     }
 

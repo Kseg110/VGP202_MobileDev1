@@ -73,7 +73,6 @@ public class GestureDetector : MonoBehaviour
         //check for if a tap occurred
         if (touchDuration < maxTapTime && swipeDistance < minSwipeDistance)
         {
-            Debug.Log("Tap Detected");
             OnTapDetected?.Invoke();
             return;
         }
@@ -88,32 +87,27 @@ public class GestureDetector : MonoBehaviour
 
             if (dotUp > directionalThreshold)
             {
-                Debug.Log("Swipe Up Detected");
                 OnSwipeDetected?.Invoke(SwipeDirection.Up);
                 return;
             }
             
             if (dotUp < -directionalThreshold)
             {
-                Debug.Log("Swipe Down Detected");
                 OnSwipeDetected?.Invoke(SwipeDirection.Down);
                 return;
             }
             
             if (dotRight > directionalThreshold)
             {
-                Debug.Log("Swipe Right Detected");
                 OnSwipeDetected?.Invoke(SwipeDirection.Right);
                 return;
             }
             
             if (dotRight < -directionalThreshold)
             {
-                Debug.Log("Swipe Left Detected");
                 OnSwipeDetected?.Invoke(SwipeDirection.Left);
             }
         }
-
     }
 }
 

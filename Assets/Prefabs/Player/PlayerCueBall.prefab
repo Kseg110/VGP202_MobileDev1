@@ -276,7 +276,7 @@ MonoBehaviour:
     groundLayer:
       serializedVersion: 2
       m_Bits: 4294967295
-    lineLength: 12
+    lineLength: 20
     touchSensitivity: 1
     minTouchDistance: 1
     enableTouchAiming: 1
