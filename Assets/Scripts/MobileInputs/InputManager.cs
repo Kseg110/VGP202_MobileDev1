@@ -14,6 +14,12 @@ public class InputManager : MonoBehaviour
 
     private PlayerControls input;
 
+    [Header("Input Area (optional)")]
+    [Tooltip("If set, only touches/points inside this 2D collider will be treated as aiming input.")]
+    [SerializeField] private Collider2D aimInputArea;
+
+    private Camera cachedMainCamera;
+
     private void Awake()
     {
         //singleton pattern
@@ -28,6 +34,19 @@ public class InputManager : MonoBehaviour
         }
 
         input = new PlayerControls();
+
+        // cache main camera reference (may be null in some editor scenarios)
+        cachedMainCamera = Camera.main;
+
+        // attempt to auto-find the AimInputArea by name if not assigned in inspector
+        if (aimInputArea == null)
+        {
+            var go = GameObject.Find("AimInputArea");
+            if (go != null)
+            {
+                aimInputArea = go.GetComponent<Collider2D>();
+            }
+        }
     }
 
     private void OnEnable()
@@ -40,7 +59,7 @@ public class InputManager : MonoBehaviour
         //tilt input
         input.Gameplay.Accelerometer.performed += ctx => OnPhoneTilt?.Invoke(ctx.ReadValue<Vector3>());
     }
-    
+
     private void OnDisable()
     {
         input.Disable();
@@ -49,6 +68,39 @@ public class InputManager : MonoBehaviour
     private void OnDestroy()
     {
         input?.Dispose();
+    }
+
+    // Public setter so other scripts can assign the area at runtime if needed
+    public void SetAimInputArea(Collider2D collider)
+    {
+        aimInputArea = collider;
+    }
+
+    // Returns true if the provided screen position is inside the configured AimInputArea.
+    // If no area is configured, this returns true (no restriction).
+    private bool IsScreenPositionWithinAimArea(Vector2 screenPos)
+    {
+        if (aimInputArea == null)
+            return true;
+
+        Camera cam = cachedMainCamera != null ? cachedMainCamera : Camera.main;
+        if (cam == null)
+            return true; // can't evaluate without a camera; default to allowing input
+
+        Vector3 worldPoint3 = cam.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, cam.nearClipPlane));
+        Vector2 worldPoint2 = new Vector2(worldPoint3.x, worldPoint3.y);
+
+        // Use Collider2D.OverlapPoint if available on the assigned collider
+        // Fallback to Physics2D.OverlapPoint in case
+        try
+        {
+            return aimInputArea.OverlapPoint(worldPoint2);
+        }
+        catch
+        {
+            Collider2D hit = Physics2D.OverlapPoint(worldPoint2);
+            return hit == aimInputArea;
+        }
     }
 
     public Vector2 GetTouchScreenPosition()
@@ -60,8 +112,11 @@ public class InputManager : MonoBehaviour
             if (primary != null && primary.press.isPressed)
             {
                 Vector2 touchPos = primary.position.ReadValue();
-                //Debug.Log($"[InputManager] Touch position (device): {touchPos}");
-                return touchPos;
+                if (IsScreenPositionWithinAimArea(touchPos))
+                {
+                    //Debug.Log($"[InputManager] Touch position (device): {touchPos}");
+                    return touchPos;
+                }
             }
         }
 
@@ -72,7 +127,7 @@ public class InputManager : MonoBehaviour
             if (pointerAction != null && pointerAction.activeControl != null)
             {
                 Vector2 actionPos = pointerAction.ReadValue<Vector2>();
-                if (actionPos != Vector2.zero)
+                if (actionPos != Vector2.zero && IsScreenPositionWithinAimArea(actionPos))
                 {
                     //Debug.Log($"[InputManager] Pointer position (action): {actionPos}");
                     return actionPos;
@@ -84,7 +139,7 @@ public class InputManager : MonoBehaviour
         if (Pointer.current != null)
         {
             Vector2 pointerPos = Pointer.current.position.ReadValue();
-            if (pointerPos != Vector2.zero)
+            if (pointerPos != Vector2.zero && IsScreenPositionWithinAimArea(pointerPos))
             {
                 //Debug.Log($"[InputManager] Pointer position (device): {pointerPos}");
                 return pointerPos;
@@ -95,7 +150,7 @@ public class InputManager : MonoBehaviour
         if (Mouse.current != null)
         {
             Vector2 mousePos = Mouse.current.position.ReadValue();
-            if (mousePos != Vector2.zero)
+            if (mousePos != Vector2.zero && IsScreenPositionWithinAimArea(mousePos))
             {
                 //Debug.Log($"[InputManager] Mouse position (device): {mousePos}");
                 return mousePos;
@@ -155,7 +210,9 @@ public class InputManager : MonoBehaviour
         // Mouse (editor) check
         if (Mouse.current != null && Mouse.current.leftButton.isPressed)
         {
-            return true;
+            Vector2 mousePos = Mouse.current.position.ReadValue();
+            if (IsScreenPositionWithinAimArea(mousePos))
+                return true;
         }
 
         // Touchscreen device check (safe)
@@ -165,7 +222,11 @@ public class InputManager : MonoBehaviour
             {
                 // primaryTouch is usually present; check its press state
                 if (Touchscreen.current.primaryTouch != null && Touchscreen.current.primaryTouch.press.isPressed)
-                    return true;
+                {
+                    Vector2 touchPos = Touchscreen.current.primaryTouch.position.ReadValue();
+                    if (IsScreenPositionWithinAimArea(touchPos))
+                        return true;
+                }
             }
         }
         catch
@@ -179,7 +240,35 @@ public class InputManager : MonoBehaviour
             try
             {
                 if (input.Gameplay.Touch.ReadValue<float>() > 0f)
-                    return true;
+                {
+                    Vector2 actionPos = Vector2.zero;
+                    try
+                    {
+                        actionPos = input.Gameplay.PointerPosition.ReadValue<Vector2>();
+                    }
+                    catch { }
+
+                    // If PointerPosition couldn't provide a value, try to read current pointer or touchscreen position.
+                    if (actionPos == Vector2.zero)
+                    {
+                        if (Pointer.current != null)
+                        {
+                            actionPos = Pointer.current.position.ReadValue();
+                        }
+                        else if (Touchscreen.current != null && Touchscreen.current.primaryTouch != null)
+                        {
+                            actionPos = Touchscreen.current.primaryTouch.position.ReadValue();
+                        }
+                    }
+
+                    // If we still can't determine a valid position, treat this as NOT touching for aiming purposes.
+                    // This prevents UI presses outside the aim area from being treated as valid aiming input.
+                    if (actionPos == Vector2.zero)
+                        return false;
+
+                    if (IsScreenPositionWithinAimArea(actionPos))
+                        return true;
+                }
             }
             catch
             {

@@ -52,7 +52,12 @@ public class AimingSystem
         {
             isInputActive = true;
             screenPos = InputManager.Instance.GetTouchScreenPosition();
-            UpdateAimingFromScreenPosition(screenPos); // Update on click/drag
+
+            // Guard: ignore invalid/outside-area positions (Vector2.zero)
+            if (screenPos != Vector2.zero)
+            {
+                UpdateAimingFromScreenPosition(screenPos); // Update on click/drag
+            }
         }
 
         UpdateCurveInput();
@@ -61,6 +66,8 @@ public class AimingSystem
     
     private void UpdateAimingFromScreenPosition(Vector2 screenPos)
     {
+        if (screenPos == Vector2.zero) return; // ignore invalid screen positions
+
         if (mainCam == null || ballTransform == null) return;
         
         // Cast a ray from screen position 
@@ -96,8 +103,13 @@ public class AimingSystem
         if (InputManager.Instance != null)
         {
             Vector2 releaseScreenPos = InputManager.Instance.GetTouchScreenPosition();
-            //Debug.Log($"[AimingSystem] Touch released at: {releaseScreenPos}");
-            UpdateAimingFromScreenPosition(releaseScreenPos);
+
+            // Guard: only update aim if release position is valid and inside aim area
+            if (releaseScreenPos != Vector2.zero)
+            {
+                //Debug.Log($"[AimingSystem] Touch released at: {releaseScreenPos}");
+                UpdateAimingFromScreenPosition(releaseScreenPos);
+            }
         }
     }
 
