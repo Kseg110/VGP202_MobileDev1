@@ -6,19 +6,19 @@ public class AimingSystem
 {
     [Header("Aiming Settings")]
     [SerializeField] private LayerMask groundLayer;
-    [SerializeField] private float lineLength = 2.0f;
+    [SerializeField] private float lineLength = 4.0f;
     
     [Header("Touch Aiming Settings")]
     [SerializeField] private float touchSensitivity = 1.0f;
     [SerializeField] private float minTouchDistance = 1f;
-    [SerializeField] private bool useDirectionalAiming = true;
+    //[SerializeField] private bool useDirectionalAiming = true;
     [SerializeField] private bool enableTouchAiming = true;
     
     [Header("Curve Shot Settings")]
     [SerializeField] private float maxCurveIntensity = 3.0f;
-    [SerializeField] private Key curveModifierKey = Key.LeftShift;
-    [SerializeField] private Key leftCurveKey = Key.A;
-    [SerializeField] private Key rightCurveKey = Key.D;
+    //[SerializeField] private Key curveModifierKey = Key.LeftShift;
+    //[SerializeField] private Key leftCurveKey = Key.A;
+    //[SerializeField] private Key rightCurveKey = Key.D;
     [SerializeField] private float curveInputSensitivity = 1.0f;
     [SerializeField] private float maxCurveAngle = 30f;
     
@@ -45,22 +45,22 @@ public class AimingSystem
 
     public void UpdateAiming()
     {
-        bool isInputActive = false;
+        //bool isInputActive = false;
         Vector2 screenPos = Vector2.zero;
 
         if (InputManager.Instance != null && InputManager.Instance.IsTouching())
         {
-            isInputActive = true;
+            //isInputActive = true;
             screenPos = InputManager.Instance.GetTouchScreenPosition();
 
-            // Guard: ignore invalid/outside-area positions (Vector2.zero)
+            // ignore invalid inputa outside aiming area
             if (screenPos != Vector2.zero)
             {
                 UpdateAimingFromScreenPosition(screenPos); // Update on click/drag
             }
         }
 
-        UpdateCurveInput();
+        //UpdateCurveInput();
         UpdateAimLineLength();
     }
     
@@ -112,7 +112,8 @@ public class AimingSystem
             }
         }
     }
-
+#region oldCurveMod
+    /*
     private void UpdateCurveInput()
     {
         if (Keyboard.current == null) 
@@ -130,7 +131,7 @@ public class AimingSystem
             CurveIntensity = 0f;
             return;
         }
-
+       
         bool leftCurvePressed = Keyboard.current[leftCurveKey].isPressed;
         bool rightCurvePressed = Keyboard.current[rightCurveKey].isPressed;
 
@@ -157,7 +158,8 @@ public class AimingSystem
             CurveIntensity = 0f;
         }
     }
-    
+    */
+#endregion
     private void UpdateAimLineLength()
     {
         if (AimDirection == Vector3.zero)

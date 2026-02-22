@@ -65,7 +65,7 @@ public class GameCanvasManager : MonoBehaviour
     {
         if (GameManager.Instance != null)
         {
-            UpdateLives(GameManager.Instance.lives);
+            UpdateLives(GameManager.Instance.Lives);
             GameManager.Instance.OnLivesChanged -= UpdateLives;
             GameManager.Instance.OnLivesChanged += UpdateLives;
         }

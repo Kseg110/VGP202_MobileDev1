@@ -255,7 +255,7 @@ public class InputManager : MonoBehaviour
             return true; // can't evaluate without a camera; default to allowing input
 
         Vector3 worldPoint3 = cam.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, cam.nearClipPlane));
-        Vector2 worldPoint2 = new Vector2(worldPoint3.x, worldPoint3.y);
+        Vector2 worldPoint2 = new (worldPoint3.x, worldPoint3.y);
 
         try
         {
@@ -361,12 +361,12 @@ public class InputManager : MonoBehaviour
         if (screenPos == Vector2.zero)
             return false;
 
-        PointerEventData pdata = new PointerEventData(EventSystem.current)
+        PointerEventData pdata = new (EventSystem.current)
         {
             position = screenPos
         };
 
-        List<RaycastResult> results = new List<RaycastResult>();
+        List<RaycastResult> results = new List <RaycastResult>();
         EventSystem.current.RaycastAll(pdata, results);
         bool isOver = results != null && results.Count > 0;
         if (debugInputManager && isOver) Debug.Log($"[InputManager] UI Raycast hit {results.Count} at {screenPos}");

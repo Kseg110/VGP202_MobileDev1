@@ -60,10 +60,6 @@ public class BallMovement
             
             owner.StartCoroutine(ApplyProjectileCurve());
         }
-        else
-        {
-            Debug.Log("NO CURVE - Intensity too low or owner null");
-        }
     }
 
     private System.Collections.IEnumerator ApplyProjectileCurve()

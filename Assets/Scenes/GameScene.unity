@@ -2248,6 +2248,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1878585382}
     - target: {fileID: 2903419006329229142, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
+      propertyPath: billiardBall
+      value: 
+      objectReference: {fileID: 1422846362}
+    - target: {fileID: 2903419006329229142, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
       propertyPath: trajectoryProjection
       value: 
       objectReference: {fileID: 1422846350}

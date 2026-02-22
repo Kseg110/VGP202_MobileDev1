@@ -29,28 +29,28 @@ public class CanvasManager : MonoBehaviour
         {
             playButton.onClick.RemoveAllListeners();
             playButton.onClick.AddListener(NewGame);
-            Debug.Log("[CanvasManager] PlayButton listener added");
+            //Debug.Log("[CanvasManager] PlayButton listener added");
         }
 
         if (settingsButton != null)
         {
             settingsButton.onClick.RemoveAllListeners();
             settingsButton.onClick.AddListener(OpenSettings);
-            Debug.Log("[CanvasManager] SettingsButton listener added");
+            //Debug.Log("[CanvasManager] SettingsButton listener added");
         }
 
         if (quitButton != null)
         {
             quitButton.onClick.RemoveAllListeners();
             quitButton.onClick.AddListener(QuitGame);
-            Debug.Log("[CanvasManager] QuitButton listener added");
+            //Debug.Log("[CanvasManager] QuitButton listener added");
         }
 
         if (backButton != null)
         {
             backButton.onClick.RemoveAllListeners();
             backButton.onClick.AddListener(CloseSettings);
-            Debug.Log("[CanvasManager] BackButton listener added");
+            //Debug.Log("[CanvasManager] BackButton listener added");
         }
     }
 

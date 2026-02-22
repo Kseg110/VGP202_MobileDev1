@@ -20,7 +20,7 @@ public class GameManager : MonoBehaviour
     #region Player Controller Information
     public BilliardController playerPrefab;
     private BilliardController _playerInstance;
-    public BilliardController playerInstance => _playerInstance;
+    public BilliardController PlayerInstance => _playerInstance;
     #endregion
 
     #region UI References
@@ -31,7 +31,7 @@ public class GameManager : MonoBehaviour
     private AudioSource audioSource;
 
     public event Action<int> OnLivesChanged;
-    public event Action<int> OnScoreChanged;
+    //public event Action<int> OnScoreChanged;
 
     #region Stats
     public int maxLives = 7;
@@ -41,7 +41,7 @@ public class GameManager : MonoBehaviour
     private protected int _rounds = 0;
     private bool winCheck = false;
 
-    public int lives
+    public int Lives
     {
         get => _lives;
         set
@@ -70,13 +70,13 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public int shots
+    public int Shots
     {
         get => _shots;
         set => _shots = value;
     }
 
-    public int rounds
+    public int Rounds
     {
         get => _rounds;
         set => _rounds = value;
@@ -100,10 +100,10 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    void Start()
-    {
+    //void Start()
+    //{
 
-    }
+    //}
 
     private void OnEnable()
     {
@@ -197,7 +197,7 @@ public class GameManager : MonoBehaviour
             }
             else if (Camera.main == null)
             {
-                GameObject fallbackCam = new GameObject("FallbackCamera");
+                GameObject fallbackCam = new ("FallbackCamera");
                 fallbackCam.AddComponent<Camera>();
                 fallbackCam.AddComponent<AudioListener>();
             }
