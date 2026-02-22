@@ -39,8 +39,8 @@ public class AimingSystem
         ballTransform = ball;
         AimDirection = Vector3.right;
         
-        Debug.Log($"[AimingSystem] Initialized - Camera: {camera.name}, Ball Position: {ballTransform.position}, Camera Position: {camera.transform.position}");
-        Debug.Log($"Camera: {mainCam}, BallTransform: {ballTransform}");
+        //Debug.Log($"[AimingSystem] Initialized - Camera: {camera.name}, Ball Position: {ballTransform.position}, Camera Position: {camera.transform.position}");
+        //Debug.Log($"Camera: {mainCam}, BallTransform: {ballTransform}");
     }
 
     public void UpdateAiming()
@@ -63,39 +63,26 @@ public class AimingSystem
     {
         if (mainCam == null || ballTransform == null) return;
         
-        // Cast a ray from screen position into the 3D world
+        // Cast a ray from screen position 
         Ray ray = mainCam.ScreenPointToRay(screenPos);
         
-        // Create a plane at Z=0 (the game plane for 2D games with camera looking down -Z)
-        // The plane normal points toward the camera (positive Z direction)
         Plane gamePlane = new Plane(Vector3.forward, new Vector3(0, 0, ballTransform.position.z));
         
-        Debug.Log($"[AimingSystem] Ray: Origin={ray.origin}, Direction={ray.direction}, Ball Z={ballTransform.position.z}");
+        //Debug.Log($"[AimingSystem] Ray: Origin={ray.origin}, Direction={ray.direction}, Ball Z={ballTransform.position.z}");
         
         if (gamePlane.Raycast(ray, out float distance))
         {
-            // Get the world position where the ray hits the plane
+            // world position where the ray hits plane
             Vector3 mouseWorldPos = ray.GetPoint(distance);
             
             // Calculate direction from ball to mouse position (in XY plane)
             Vector3 direction = mouseWorldPos - ballTransform.position;
-            direction.z = 0f; // Ensure it's in the 2D plane
-            
-            Debug.Log($"[AimingSystem] ✓ HIT - ScreenPos: {screenPos}, MouseWorld: {mouseWorldPos}, Ball: {ballTransform.position}, Direction: {direction}, Magnitude: {direction.magnitude}");
+            direction.z = 0f; 
             
             if (direction.sqrMagnitude > 0.01f)
             {
                 AimDirection = direction.normalized;
-                Debug.Log($"[AimingSystem] *** AIM UPDATED *** Direction: {AimDirection}");
             }
-            else
-            {
-                Debug.LogWarning($"[AimingSystem] Direction too small: {direction.magnitude}");
-            }
-        }
-        else
-        {
-            Debug.LogWarning($"[AimingSystem] ✗ MISS - Raycast missed the game plane! Ray: {ray.origin} -> {ray.direction}");
         }
     }
     
@@ -109,7 +96,7 @@ public class AimingSystem
         if (InputManager.Instance != null)
         {
             Vector2 releaseScreenPos = InputManager.Instance.GetTouchScreenPosition();
-            Debug.Log($"[AimingSystem] Touch released at: {releaseScreenPos}");
+            //Debug.Log($"[AimingSystem] Touch released at: {releaseScreenPos}");
             UpdateAimingFromScreenPosition(releaseScreenPos);
         }
     }
@@ -171,12 +158,12 @@ public class AimingSystem
         if (Physics.Raycast(ballTransform.position, AimDirection, out RaycastHit hit, lineLength, groundLayer))
         {
             CurrentAimLineLength = hit.distance;
-            Debug.DrawLine(ballTransform.position, hit.point, Color.red, 0.1f);
+            //Debug.DrawLine(ballTransform.position, hit.point, Color.red, 0.1f);
         }
         else
         {
             CurrentAimLineLength = lineLength;
-            Debug.DrawLine(ballTransform.position, ballTransform.position + (AimDirection * lineLength), Color.green, 0.1f);
+            //Debug.DrawLine(ballTransform.position, ballTransform.position + (AimDirection * lineLength), Color.green, 0.1f);
         }
     }
 

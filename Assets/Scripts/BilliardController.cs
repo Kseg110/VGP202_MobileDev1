@@ -42,8 +42,6 @@ public class BilliardController : PhysicsMaterialManager
         aimLine = GetComponent<LineRenderer>();
         mainCam = Camera.main;
 
-        Debug.Log($"BilliardController Awake - Camera: {(mainCam != null ? mainCam.name : "null")}, LineRenderer: {(aimLine != null ? "found" : "null")}");
-
         RigidbodyConfigurator.ConfigureRigidbody(rb, rigidbodyConfig);
         
         if (billiardBall == null)
@@ -142,7 +140,7 @@ public class BilliardController : PhysicsMaterialManager
         if (powerBar != null) 
             powerBar.SetActive(true);
             
-        Debug.Log("Started power charging");
+        Debug.Log("Power charging started");
     }
     
     private void HandlePowerCharging()
@@ -175,7 +173,7 @@ public class BilliardController : PhysicsMaterialManager
         
         Vector3 baseForce = aimingSystem.AimDirection * currentPower;
         
-        Debug.Log($"Firing shot - Power: {currentPower}, Direction: {aimingSystem.AimDirection}");
+        Debug.Log($"Shot fired - Power: {currentPower:F2}");
         
         // Apply force with or without curve
         if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
@@ -228,12 +226,6 @@ public class BilliardController : PhysicsMaterialManager
         
         if (!showAiming) return;
 
-        // Add debug for line renderer updates
-        Vector3 startPos = transform.position + Vector3.up * 0.05f;
-        Vector3 endPos = startPos + (aimingSystem.AimDirection * aimingSystem.CurrentAimLineLength);
-        
-        Debug.Log($"Line Renderer Update - Start: {startPos}, End: {endPos}, Direction: {aimingSystem.AimDirection}");
-
         DrawAimLine(aimingSystem.CurrentAimLineLength);
         RotateArrow();
 
@@ -279,7 +271,6 @@ public class BilliardController : PhysicsMaterialManager
         {
             Quaternion lookRot = Quaternion.LookRotation(aimingSystem.AimDirection);
             arrowIndicator.rotation = lookRot;
-            Debug.Log($"Arrow rotation updated: {lookRot.eulerAngles}");
         }
     }
 
@@ -303,8 +294,6 @@ public class BilliardController : PhysicsMaterialManager
         aimLine.positionCount = 2;
         aimLine.SetPosition(0, start);
         aimLine.SetPosition(1, end);
-        
-        Debug.Log($"Drawing straight line - Start: {start}, End: {end}, Length: {length}");
     }
 
     private void DrawCurvedAimLine(float length)
@@ -356,8 +345,6 @@ public class BilliardController : PhysicsMaterialManager
         aimLine.material = new Material(Shader.Find("Sprites/Default"));
         aimLine.startColor = Color.red;
         aimLine.endColor = Color.red;
-        
-        Debug.Log($"LineRenderer setup complete - Enabled: {aimLine.enabled}, Width: {aimLine.startWidth}");
     }
 
     private void ApplyPhysicsMaterial()

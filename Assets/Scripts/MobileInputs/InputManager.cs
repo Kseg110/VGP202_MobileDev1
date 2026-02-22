@@ -60,7 +60,7 @@ public class InputManager : MonoBehaviour
             if (primary != null && primary.press.isPressed)
             {
                 Vector2 touchPos = primary.position.ReadValue();
-                Debug.Log($"[InputManager] Touch position (device): {touchPos}");
+                //Debug.Log($"[InputManager] Touch position (device): {touchPos}");
                 return touchPos;
             }
         }
@@ -74,7 +74,7 @@ public class InputManager : MonoBehaviour
                 Vector2 actionPos = pointerAction.ReadValue<Vector2>();
                 if (actionPos != Vector2.zero)
                 {
-                    Debug.Log($"[InputManager] Pointer position (action): {actionPos}");
+                    //Debug.Log($"[InputManager] Pointer position (action): {actionPos}");
                     return actionPos;
                 }
             }
@@ -86,7 +86,7 @@ public class InputManager : MonoBehaviour
             Vector2 pointerPos = Pointer.current.position.ReadValue();
             if (pointerPos != Vector2.zero)
             {
-                Debug.Log($"[InputManager] Pointer position (device): {pointerPos}");
+                //Debug.Log($"[InputManager] Pointer position (device): {pointerPos}");
                 return pointerPos;
             }
         }
@@ -97,13 +97,10 @@ public class InputManager : MonoBehaviour
             Vector2 mousePos = Mouse.current.position.ReadValue();
             if (mousePos != Vector2.zero)
             {
-                Debug.Log($"[InputManager] Mouse position (device): {mousePos}");
+                //Debug.Log($"[InputManager] Mouse position (device): {mousePos}");
                 return mousePos;
             }
         }
-
-        // No Input System pointer available -> return zero and warn (avoid using legacy Input when Input System is active)
-        Debug.LogWarning("[InputManager] No pointer input available via Input System. Returning Vector2.zero. If you need legacy Input API enable 'Both' in Project Settings > Player > Active Input Handling.");
         return Vector2.zero;
     }
 
@@ -116,11 +113,6 @@ public class InputManager : MonoBehaviour
             cameraToUse = Camera.main;
         }
 
-        if (cameraToUse == null)
-        {
-            Debug.LogWarning("[InputManager] No camera available for Screen->World conversion.");
-            return Vector3.zero;
-        }
 
         Vector2 screenPos = GetTouchScreenPosition();
 
