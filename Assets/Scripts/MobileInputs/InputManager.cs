@@ -102,10 +102,9 @@ public class InputManager : MonoBehaviour
             }
         }
 
-        // 5) Last-resort legacy API (will return 0,0 if nothing else)
-        Vector2 legacyMousePos = (Vector2)UnityEngine.Input.mousePosition;
-        Debug.Log($"[InputManager] Legacy mouse position: {legacyMousePos}");
-        return legacyMousePos;
+        // No Input System pointer available -> return zero and warn (avoid using legacy Input when Input System is active)
+        Debug.LogWarning("[InputManager] No pointer input available via Input System. Returning Vector2.zero. If you need legacy Input API enable 'Both' in Project Settings > Player > Active Input Handling.");
+        return Vector2.zero;
     }
 
     // Convert screen position to world position by raycasting to a plane at planeZ.
