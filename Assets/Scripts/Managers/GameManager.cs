@@ -1,11 +1,9 @@
 // commented out save logic, will implement in future build to allow player to save and close the game and return to current run in the future.
 
-using UnityEngine;
-using UnityEngine.SceneManagement;
 using System;
-using UnityEngine.Events;
-using UnityEditor;
+using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 
 [DefaultExecutionOrder(-10)]
 public class GameManager : MonoBehaviour
@@ -24,10 +22,14 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region UI References
-    public GameObject gameOverCanvasPrefab;
-    private GameObject gameOverCanvasInstance;
-    public GameObject endScenePanel;
+    // Removed EndScenePanel and prefab fields. GameCanvasManager is now authoritative for end UI.
     #endregion
+
+    [Header("Win / Enemy Parent")]
+    [Tooltip("Optional: parent GameObject that contains all enemy entries in the Game scene (set in inspector).")]
+    public Transform enemiesParent;
+    [Tooltip("If enemiesParent is not set, this name will be searched for in the active scene.")]
+    public string enemiesParentName = "Enemies";
 
     private AudioSource audioSource;
 
@@ -44,6 +46,7 @@ public class GameManager : MonoBehaviour
     private protected int _maxShots = 10;
     private protected int _rounds = 0;
     private bool winCheck = false;
+    #endregion
 
     public int Lives
     {
@@ -52,8 +55,9 @@ public class GameManager : MonoBehaviour
         {
             if (value <= 0)
             {
-                GameOver();
                 _lives = 0;
+                // ensure loss path shows UI (GameCanvasManager will pause)
+                ToggleEndScenePanel(isWin: false);
             }
             else if (value < _lives)
             {
@@ -90,7 +94,6 @@ public class GameManager : MonoBehaviour
             OnRoundsChanged?.Invoke(_rounds);
         }
     }
-    #endregion
 
     #region Singleton Pattern
     private static GameManager _instance;
@@ -102,10 +105,10 @@ public class GameManager : MonoBehaviour
         {
             _instance = this;
             DontDestroyOnLoad(gameObject);
-            
+
             // Subscribe to scene loading to spawn player
             SceneManager.sceneLoaded += OnSceneLoaded;
-            
+
             return;
         }
 
@@ -119,6 +122,22 @@ public class GameManager : MonoBehaviour
         if (scene.buildIndex == 1 || scene.name.Contains("Game"))
         {
             SpawnPlayer();
+
+            // Try to resolve enemiesParent automatically if not assigned
+            if (enemiesParent == null && !string.IsNullOrEmpty(enemiesParentName))
+            {
+                var found = GameObject.Find(enemiesParentName);
+                if (found != null)
+                    enemiesParent = found.transform;
+            }
+
+            // Reset win flag for a new playthrough
+            winCheck = false;
+
+            // Ask GameCanvasManager to hide the end scene UI if present
+            var canvasMgr = FindObjectOfType<GameCanvasManager>();
+            if (canvasMgr != null)
+                canvasMgr.HideEndScene();
         }
     }
 
@@ -142,7 +161,7 @@ public class GameManager : MonoBehaviour
             InputManager.Instance.OnTouchEnd -= HandleTouchRelease;
             InputManager.Instance.OnPhoneTilt -= HandlePhoneTilt;
         }
-        
+
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
@@ -173,6 +192,12 @@ public class GameManager : MonoBehaviour
 
         // Ensure there is always one AudioListener in the scene
         EnsureAudioListener();
+
+        // Only perform win checks while in the actual game scene and if win not already detected
+        if (!winCheck && (SceneManager.GetActiveScene().buildIndex == 1 || SceneManager.GetActiveScene().name.Contains("Game")))
+        {
+            CheckForWin();
+        }
     }
 
     private void HandleMobileBackButton()
@@ -226,20 +251,27 @@ public class GameManager : MonoBehaviour
 
     private void GameOver()
     {
-        // Show end scene panel if available
-        if (endScenePanel != null)
+        // Delegate display to GameCanvasManager (authoritative UI owner)
+        ToggleEndScenePanel(isWin: false);
+    }
+
+    // Centralized helper to show end scene panel and toggle Win/Loss titles.
+    // GameCanvasManager is authoritative for the end UI.
+    private void ToggleEndScenePanel(bool isWin)
+    {
+        var canvasMgr = FindObjectOfType<GameCanvasManager>();
+        if (canvasMgr != null)
         {
-            endScenePanel.SetActive(true);
+            canvasMgr.ShowEndScene(isWin);
         }
         else
         {
-            // Fallback to loading menu scene
-            SceneManager.LoadScene(0);
+            Debug.LogWarning("[GameManager] GameCanvasManager not found. End scene UI not shown.");
         }
     }
 
-    public Transform spawnPoint; 
-    
+    public Transform spawnPoint;
+
     private void SpawnPlayer()
     {
         // Don't spawn if player already exists
@@ -270,10 +302,10 @@ public class GameManager : MonoBehaviour
         // Instantiate player
         Vector3 spawnPos = spawnPoint != null ? spawnPoint.position : Vector3.zero;
         Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
-        
+
         _playerInstance = Instantiate(playerPrefab, spawnPos, spawnRot);
         _playerInstance.gameObject.name = "Player";
-        
+
         // Notify listeners
         OnPlayerControllerCreated?.Invoke(_playerInstance);
     }
@@ -283,7 +315,7 @@ public class GameManager : MonoBehaviour
         if (_playerInstance != null)
         {
             _playerInstance.transform.position = position;
-            
+
             // Reset rigidbody
             Rigidbody rb = _playerInstance.GetComponent<Rigidbody>();
             if (rb != null)
@@ -291,18 +323,39 @@ public class GameManager : MonoBehaviour
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
-            
+
             // Reset ball state
             BilliardBall ball = _playerInstance.GetComponent<BilliardBall>();
             if (ball != null)
             {
                 ball.currentSideSpin = 0f;
             }
-            
+
         }
         else
         {
             SpawnPlayer();
+        }
+    }
+
+    // Checks whether all children under enemiesParent are destroyed -> triggers win flow.
+    private void CheckForWin()
+    {
+        // Resolve parent if null (try find by name)
+        if (enemiesParent == null && !string.IsNullOrEmpty(enemiesParentName))
+        {
+            var found = GameObject.Find(enemiesParentName);
+            if (found != null)
+                enemiesParent = found.transform;
+        }
+
+        if (enemiesParent == null) return;
+
+        // If no child enemies remain, declare win.
+        if (enemiesParent.childCount == 0)
+        {
+            winCheck = true;
+            ToggleEndScenePanel(isWin: true);
         }
     }
 
@@ -352,15 +405,8 @@ public class GameManager : MonoBehaviour
             Destroy(_playerInstance.gameObject);
             _playerInstance = null;
         }
-        
-        // Show end screen or load end scene
-        if (endScenePanel != null)
-        {
-            endScenePanel.SetActive(true);
-        }
-        else
-        {
-            SceneManager.LoadScene("EndScene");
-        }
+
+        // Delegate to GameCanvasManager for showing loss UI
+        ToggleEndScenePanel(isWin: false);
     }
 }

@@ -446,7 +446,8 @@ MonoBehaviour:
   musicMixerGroup: {fileID: 0}
   sfxMixerGroup: {fileID: 0}
   playerPrefab: {fileID: 2903419006329229142, guid: b4a8fa5b6602d4b4faf8a815fc594195, type: 3}
-  gameOverCanvasPrefab: {fileID: 0}
+  enemiesParent: {fileID: 0}
+  enemiesParentName: Enemies
   maxLives: 7
   spawnPoint: {fileID: 0}
 --- !u!4 &1362258860
@@ -478,7 +479,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InputManager
   aimInputArea: {fileID: 448662837374501765, guid: 277e8c2887a5cab499cf284989df6927, type: 3}
   autoFindAimInputArea: 1
-  debugInputManager: 0
 --- !u!114 &1362258862
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -486,7 +486,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1362258857}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 57f9be9b2633d664fbad9eaaa125f802, type: 3}
   m_Name: 
@@ -507,6 +507,24 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5027408347911937804, guid: 99b3b6ccef89319458d9c71ed9811810, type: 3}
   m_PrefabInstance: {fileID: 1640416950102408787}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1552534985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1552534977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57f9be9b2633d664fbad9eaaa125f802, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CanvasManager
+  playButton: {fileID: 1256692531}
+  settingsButton: {fileID: 1038222426}
+  quitButton: {fileID: 1037731982}
+  backButton: {fileID: 936249034}
+  mainMenuPanel: {fileID: 1552534977}
+  settingsPanel: {fileID: 15671970}
 --- !u!1 &1602878410
 GameObject:
   m_ObjectHideFlags: 0
@@ -789,7 +807,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5027408347911937804, guid: 99b3b6ccef89319458d9c71ed9811810, type: 3}
       insertIndex: -1
       addedObject: {fileID: 160850413}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6873578727376851334, guid: 99b3b6ccef89319458d9c71ed9811810, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1552534985}
   m_SourcePrefab: {fileID: 100100000, guid: 99b3b6ccef89319458d9c71ed9811810, type: 3}
 --- !u!1001 &3604936374391075664
 PrefabInstance:

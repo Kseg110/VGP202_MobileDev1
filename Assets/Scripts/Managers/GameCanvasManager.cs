@@ -23,11 +23,20 @@ public class GameCanvasManager : MonoBehaviour
     public Button returnToMenuButton;
     public Button restartButton;
 
+    [Header("End Scene Panel")] // optional - it will look for the buttons if not applied manually 
+    [Tooltip("If not assigned the script will try to find 'EndScenePanel' or 'EndScene' in the scene.")]
+    public GameObject endScenePanel;
+    [Tooltip("If not assigned the script will try to find 'RestartButton' child under EndScenePanel.")]
+    public Button endRestartButton;
+    [Tooltip("If not assigned the script will try to find 'QuitButton' child under EndScenePanel.")]
+    public Button endQuitButton;
+
     private bool isInitialized = false;
 
     void Start()
     {
         SetupButtons();
+        SetupEndSceneButtons();
         // Delay initialization to ensure GameManager is ready
         Invoke(nameof(InitializeHUD), 0.1f);
     }
@@ -79,6 +88,95 @@ public class GameCanvasManager : MonoBehaviour
         }
     }
 
+    // Try to wire the EndScene panel buttons. Safe if fields already assigned.
+    private void SetupEndSceneButtons()
+    {
+        // Resolve panel if needed
+        if (endScenePanel == null)
+        {
+            var found = GameObject.Find("EndScenePanel");
+            if (found == null)
+                found = GameObject.Find("EndScene");
+            if (found != null)
+                endScenePanel = found;
+        }
+
+        if (endScenePanel != null)
+        {
+            // Try to resolve Restart button
+            if (endRestartButton == null)
+            {
+                var restartTf = endScenePanel.transform.Find("RestartButton");
+                if (restartTf != null)
+                    endRestartButton = restartTf.GetComponent<Button>();
+                else
+                {
+                    var go = GameObject.Find("RestartButton");
+                    if (go != null) endRestartButton = go.GetComponent<Button>();
+                }
+            }
+
+            // Try to resolve Quit button
+            if (endQuitButton == null)
+            {
+                var quitTf = endScenePanel.transform.Find("QuitButton");
+                if (quitTf != null)
+                    endQuitButton = quitTf.GetComponent<Button>();
+                else
+                {
+                    var go = GameObject.Find("QuitButton");
+                    if (go != null) endQuitButton = go.GetComponent<Button>();
+                }
+            }
+
+            // Wire listeners (use existing methods)
+            if (endRestartButton != null)
+            {
+                endRestartButton.onClick.RemoveAllListeners();
+                endRestartButton.onClick.AddListener(RestartGame);
+            }
+
+            if (endQuitButton != null)
+            {
+                endQuitButton.onClick.RemoveAllListeners();
+                endQuitButton.onClick.AddListener(ReturnToMenu);
+            }
+        }
+    }
+
+    // Public method used by GameManager to show the end scene UI.
+    public void ShowEndScene(bool isWin)
+    {
+        // Ensure we have the panel and the buttons wired.
+        if (endScenePanel == null)
+        {
+            var found = GameObject.Find("EndScenePanel");
+            if (found == null) found = GameObject.Find("EndScene");
+            if (found != null) endScenePanel = found;
+        }
+
+        SetupEndSceneButtons();
+
+        if (endScenePanel == null) return;
+
+        // Toggle titles (match names used in prefab)
+        var lossTitle = endScenePanel.transform.Find("LossTitle");
+        var winTitle = endScenePanel.transform.Find("WinTitle");
+        if (lossTitle != null) lossTitle.gameObject.SetActive(!isWin);
+        if (winTitle != null) winTitle.gameObject.SetActive(isWin);
+
+        endScenePanel.SetActive(true);
+        Time.timeScale = 0f;
+    }
+
+    // Public hide method (optional)
+    public void HideEndScene()
+    {
+        if (endScenePanel != null)
+            endScenePanel.SetActive(false);
+        Time.timeScale = 1f;
+    }
+
     private void InitializeHUD()
     {
         if (isInitialized) return;
@@ -107,6 +205,10 @@ public class GameCanvasManager : MonoBehaviour
         {
             pauseMenuPanel.SetActive(false);
         }
+
+        // Also ensure EndScene panel hidden initially if present
+        if (endScenePanel != null)
+            endScenePanel.SetActive(false);
     }
 
     public void TogglePause()
