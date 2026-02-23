@@ -21,9 +21,10 @@ public class BilliardController : PhysicsMaterialManager
     [SerializeField] private Color maxPowerColor = Color.red;
     [SerializeField] private Color curveColor = Color.yellow;
 
-    [Header("UI")]
+    [Header("HUD Buttons")]
     [SerializeField] private RadialPowerBar powerBar;
     [SerializeField] private ShootButton shootButton;
+    [SerializeField] private SpinButton spinButton; 
 
     private Rigidbody rb;
     private LineRenderer aimLine;
@@ -195,20 +196,30 @@ public class BilliardController : PhysicsMaterialManager
     private void FireShot()
     {
         if (!isCharging)
-        {
             return;
-        }
         
         Vector3 baseForce = aimingSystem.AimDirection * currentPower;
         
-        // Apply force with or without curve
+        // Get spin from UI
+        Vector2 spin = Vector2.zero;
+        if (spinButton != null)
+            spin = spinButton.GetSpinNormalized();
+
+        // Enhanced spin feedback - show spin strength in UI
+        if (spinButton != null && spin.magnitude > 0.1f)
+        {
+            Debug.Log($"Applying spin: X={spin.x:F2}, Y={spin.y:F2}");
+            // You could add visual feedback here, like particle effects
+        }
+
+        // Apply force with spin
         if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
         {
-            billiardBall.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity);
+            billiardBall.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity, spin);
         }
         else
         {
-            billiardBall.ApplyForce(baseForce);
+            billiardBall.ApplyForce(baseForce, spin);
         }
 
         // Decrement shots in GameManager
@@ -266,20 +277,24 @@ public class BilliardController : PhysicsMaterialManager
         DrawAimLine(aimingSystem.CurrentAimLineLength);
         RotateArrow();
 
-        // Set color based on state and curve mode
+        // Enhanced color logic that considers spin
         Color lineColor;
+        Vector2 currentSpin = spinButton?.GetSpinNormalized() ?? Vector2.zero;
+        bool hasSignificantSpin = currentSpin.magnitude > 0.1f;
+        
         if (isCharging)
         {
             float powerPercent = currentPower / maxPower;
-            Color baseColor = aimingSystem.IsCurveShotActive ? curveColor : minPowerColor;
+            Color baseColor = aimingSystem.IsCurveShotActive ? curveColor : 
+                             hasSignificantSpin ? Color.magenta : minPowerColor; // Magenta for spin
             lineColor = Color.Lerp(baseColor, maxPowerColor, powerPercent);
             
-            // Scale arrow based on power
             arrowIndicator.localScale = Vector3.one * (1f + powerPercent * 0.5f);
         }
         else
         {
-            lineColor = aimingSystem.IsCurveShotActive ? curveColor : minPowerColor;
+            lineColor = aimingSystem.IsCurveShotActive ? curveColor : 
+                       hasSignificantSpin ? Color.magenta : minPowerColor;
             arrowIndicator.localScale = Vector3.one;
         }
         

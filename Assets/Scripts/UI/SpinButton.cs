@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 public class SpinButton : MonoBehaviour
 {
@@ -23,6 +24,7 @@ public class SpinButton : MonoBehaviour
     public bool IsOpen => isOpen;
 
     private bool isOpen;
+    private bool buttonClickedThisFrame; // Track if button was clicked this frame
 
     private void Awake()
     {
@@ -52,32 +54,108 @@ public class SpinButton : MonoBehaviour
         if (!isOpen)
             return;
 
+        // Skip input processing if button was clicked this frame
+        if (buttonClickedThisFrame)
+        {
+            buttonClickedThisFrame = false;
+            return;
+        }
+
         // Use the new Input System: prefer touch when available, fallback to mouse
         var touchscreen = Touchscreen.current;
         if (touchscreen != null)
         {
-            // primaryTouch will reference the active touch on screen devices
             var primary = touchscreen.primaryTouch;
-            if (primary != null && primary.press.isPressed)
+            if (primary != null && primary.press.wasPressedThisFrame) // Only check for new presses
             {
                 Vector2 pos = primary.position.ReadValue();
-                TryMoveIndicator(pos);
+                if (IsPositionWithinBallArea(pos))
+                {
+                    TryMoveIndicator(pos);
+                }
+                return;
+            }
+            else if (primary != null && primary.press.isPressed)
+            {
+                // Continue dragging if already pressed and within ball area
+                Vector2 pos = primary.position.ReadValue();
+                if (IsPositionWithinBallArea(pos))
+                {
+                    TryMoveIndicator(pos);
+                }
                 return;
             }
         }
 
         var mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.isPressed)
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame) // Only check for new presses
         {
             Vector2 pos = mouse.position.ReadValue();
-            TryMoveIndicator(pos);
+            if (IsPositionWithinBallArea(pos))
+            {
+                TryMoveIndicator(pos);
+            }
         }
+        else if (mouse != null && mouse.leftButton.isPressed)
+        {
+            // Continue dragging if already pressed and within ball area
+            Vector2 pos = mouse.position.ReadValue();
+            if (IsPositionWithinBallArea(pos))
+            {
+                TryMoveIndicator(pos);
+            }
+        }
+    }
+
+    private bool IsPositionWithinBallArea(Vector2 screenPosition)
+    {
+        if (ballRect == null)
+            return false;
+
+        // Choose camera depending on canvas render mode
+        Camera cam = null;
+        if (rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            cam = rootCanvas.worldCamera;
+
+        // Check if the screen position is within the BALL area specifically, not the entire panel
+        bool isWithinBallRect = RectTransformUtility.RectangleContainsScreenPoint(ballRect, screenPosition, cam);
+        
+        if (!isWithinBallRect)
+            return false;
+
+        // Additional check: make sure we're not clicking on UI elements (like the button)
+        // This prevents the spin button click from being processed as ball input
+        if (EventSystem.current != null)
+        {
+            PointerEventData eventData = new PointerEventData(EventSystem.current)
+            {
+                position = screenPosition
+            };
+            
+            var raycastResults = new System.Collections.Generic.List<RaycastResult>();
+            EventSystem.current.RaycastAll(eventData, raycastResults);
+            
+            // If we hit any UI element that's not the ball rect, ignore the input
+            foreach (var result in raycastResults)
+            {
+                if (result.gameObject != ballRect.gameObject && 
+                    result.gameObject.GetComponent<Button>() != null)
+                {
+                    return false; // Clicked on a button, not the ball area
+                }
+            }
+        }
+
+        return true;
     }
 
     private void ToggleSpinUI()
     {
         if (spinUIPanel == null)
             return;
+
+        // Mark that button was clicked this frame to ignore input processing
+        buttonClickedThisFrame = true;
 
         isOpen = !isOpen;
         spinUIPanel.SetActive(isOpen);

@@ -87,6 +87,27 @@ public class BilliardBall : MonoBehaviour
         Debug.Log($"[BilliardBall] Applied curved force (3-arg): {baseForce}, LateralDir={lateralDirection}, Intensity={lateralIntensity}, Spin={sideSpin}");
     }
 
+    public void ApplyForce(Vector3 force, Vector2 spin)
+    {
+        rb.AddForce(force, ForceMode.Impulse);
+        ApplySpin(spin);
+    }
+
+    public void ApplyForceWithCurve(Vector3 force, float curveIntensity, Vector2 spin)
+    {
+        // existing curve logic...
+        rb.AddForce(force, ForceMode.Impulse);
+        ApplySpin(spin);
+    }
+
+    private void ApplySpin(Vector2 spin)
+    {
+        // Map spin.x to side spin (z axis), spin.y to top/back spin (x axis)
+        float spinStrength = 10f; // tweak as needed
+        Vector3 angular = new Vector3(-spin.y, 0, spin.x) * spinStrength;
+        rb.AddTorque(angular, ForceMode.Impulse);
+    }
+
     public bool IsBallMoving()
     {
         bool isLinearVelocityLow = rb.linearVelocity.magnitude <= stopVelocityThreshold;
