@@ -296,7 +296,6 @@ public class Projection : PhysicsMaterialManager
 
     public void ShowCurvePreview(Vector3 startPos, Vector3 velocity, float curveIntensity)
     {
-        // Fallback to original method for compatibility
         ShowSpinCurvePreview(startPos, velocity, curveIntensity, Vector2.zero);
     }
 
