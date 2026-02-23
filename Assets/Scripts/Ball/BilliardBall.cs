@@ -4,35 +4,44 @@ using UnityEngine;
 public class BilliardBall : MonoBehaviour
 {
     [Header("Settings")]
-    public float curveStrength = 15.0f; // Increased from 8.0f for more noticeable curves
-    public float spinDecayRate = 0.5f; // Reduced from 1.0f so spin lasts longer
+    public float curveStrength = 15.0f;
+    public float spinDecayRate = 0.5f;
     public float stopVelocityThreshold = 0.1f;
 
     [Header("Spin Settings")]
-    public float spinStrength = 15f; // Increased from 10f for more visual spin
-    public float topSpinEffect = 8f; // Increased from 5f for more top spin effect
+    public float spinStrength = 15f;
+    public float topSpinEffect = 8f;
+
+    [Header("Kinematic Physics")]
+    [SerializeField] private float linearDamping = 0.95f;
+    [SerializeField] private float angularDamping = 0.98f;
+    [SerializeField] private float restitution = 0.8f; // Bounciness
 
     [Header("State - Debug Info")]
-    [SerializeField] private float debugCurrentSideSpin = 0f; // For inspector visibility
-    [SerializeField] private Vector2 debugCurrentSpin = Vector2.zero; // For inspector visibility
+    [SerializeField] private float debugCurrentSideSpin = 0f;
+    [SerializeField] private Vector2 debugCurrentSpin = Vector2.zero;
+    [SerializeField] private Vector3 debugCurrentVelocity = Vector3.zero;
     
-    // Range: -1 (Max Right Spin) to 1 (Max Left Spin)
     public float currentSideSpin = 0f;
-    
-    // Current 2D spin values from UI
     private Vector2 currentSpin = Vector2.zero;
 
     private Rigidbody rb;
     private bool wasMovingLastFrame = false;
 
+    // Manual velocity tracking for kinematic mode
+    private Vector3 currentVelocity = Vector3.zero;
+    private Vector3 currentAngularVelocity = Vector3.zero;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
     }
 
     void Start()
     {
-        Debug.Log($"[BilliardBall] Initialized with curveStrength: {curveStrength}, spinDecayRate: {spinDecayRate}");
+        Debug.Log($"[BilliardBall] Initialized in KINEMATIC mode with curveStrength: {curveStrength}, spinDecayRate: {spinDecayRate}");
     }
     
     public void Initialize(Rigidbody rigidbody, MonoBehaviour ownerMonoBehaviour = null)
@@ -40,90 +49,83 @@ public class BilliardBall : MonoBehaviour
         rb = rigidbody;
     }
 
-    // Call this to shoot the ball (adapted for 3D)
+    // Shoot with kinematic velocity
     public void Shoot(Vector3 direction, float power, float sideSpin = 0f)
     {
-        // Apply immediate forward impulse
-        rb.AddForce(direction.normalized * power, ForceMode.Impulse);
-
-        // Set the side spin 
-        currentSideSpin = sideSpin;
-        currentSpin = new Vector2(sideSpin, 0f); // Convert to 2D spin
-        debugCurrentSideSpin = currentSideSpin;
-        debugCurrentSpin = currentSpin;
+        currentVelocity = direction.normalized * power;
         
-        Debug.Log($"[BilliardBall] Shot applied: Direction={direction}, Power={power}, Spin={sideSpin}");
+        currentSideSpin = sideSpin;
+        currentSpin = new Vector2(sideSpin, 0f);
+        
+        // Apply angular velocity for visual spin
+        ApplyAngularVelocity(currentSpin);
+        
+        UpdateDebugValues();
+        Debug.Log($"[BilliardBall] Kinematic shot: Direction={direction}, Power={power}, Velocity={currentVelocity.magnitude:F2}, Spin={sideSpin}");
     }
 
-    // Legacy compatibility method - FIXED to apply current spin when no explicit spin is provided
+    // Convert force to velocity (kinematic mode)
     public void ApplyForce(Vector3 force)
     {
-        rb.AddForce(force, ForceMode.Impulse);
+        currentVelocity += force / rb.mass;
         
-        // Apply current spin if it exists (from UI)
         if (currentSpin.magnitude > 0.01f)
         {
-            Vector3 angular = new Vector3(-currentSpin.y, 0, currentSpin.x) * spinStrength;
-            rb.AddTorque(angular, ForceMode.Impulse);
-            Debug.Log($"[BilliardBall] Applied existing spin: {currentSpin}, Torque: {angular}");
+            ApplyAngularVelocity(currentSpin);
+            Debug.Log($"[BilliardBall] Applied existing spin: {currentSpin}");
         }
         
-        Debug.Log($"[BilliardBall] Applied force: {force}, PreservingSpin={currentSpin}");
+        UpdateDebugValues();
+        Debug.Log($"[BilliardBall] Applied kinematic force: {force}, NewVelocity={currentVelocity.magnitude:F2}");
     }
 
-    // Existing two-argument API (kept for compatibility)
     public void ApplyForceWithCurve(Vector3 baseForce, float curveIntensity)
     {
-        // Convert curve intensity to side spin - slightly more conservative conversion
-        float sideSpin = Mathf.Clamp(curveIntensity / 2.0f, -1f, 1f); // Changed back to 2.0f for stronger curves
+        currentVelocity += baseForce / rb.mass;
         
-        rb.AddForce(baseForce, ForceMode.Impulse);
+        float sideSpin = Mathf.Clamp(curveIntensity / 2.0f, -1f, 1f);
         currentSideSpin = sideSpin;
-        currentSpin = new Vector2(sideSpin, currentSpin.y); // Preserve Y spin from UI
-        debugCurrentSideSpin = currentSideSpin;
-        debugCurrentSpin = currentSpin;
+        currentSpin = new Vector2(sideSpin, currentSpin.y);
         
-        Debug.Log($"[BilliardBall] Applied curved force: {baseForce}, Spin={sideSpin}, CurveIntensity={curveIntensity}");
+        ApplyAngularVelocity(currentSpin);
+        UpdateDebugValues();
+        
+        Debug.Log($"[BilliardBall] Applied kinematic curved force: Velocity={currentVelocity.magnitude:F2}, Spin={sideSpin}");
     }
 
     public void ApplyForceWithCurve(Vector3 baseForce, Vector3 lateralDirection, float lateralIntensity)
     {
-        rb.AddForce(baseForce, ForceMode.Impulse);
+        currentVelocity += baseForce / rb.mass;
 
-        // Determine spin sign from lateralDirection
         float sign = 0f;
         if (lateralDirection != Vector3.zero)
         {
             sign = Mathf.Sign(Vector3.Dot(lateralDirection.normalized, Vector3.right));
         }
 
-        // Map lateralIntensity for sidespin
         float sideSpin = Mathf.Clamp((lateralIntensity / 2.0f) * sign, -1f, 1f);
-
         currentSideSpin = sideSpin;
-        currentSpin = new Vector2(sideSpin, currentSpin.y); // Preserve Y spin from UI
-        debugCurrentSideSpin = currentSideSpin;
-        debugCurrentSpin = currentSpin;
+        currentSpin = new Vector2(sideSpin, currentSpin.y);
 
-        Debug.Log($"[BilliardBall] Applied curved force (3-arg): {baseForce}, LateralDir={lateralDirection}, Intensity={lateralIntensity}, Spin={sideSpin}");
+        ApplyAngularVelocity(currentSpin);
+        UpdateDebugValues();
+        
+        Debug.Log($"[BilliardBall] Applied kinematic curved force (3-arg): Velocity={currentVelocity.magnitude:F2}, Spin={sideSpin}");
     }
 
     public void ApplyForce(Vector3 force, Vector2 spin)
     {
-        rb.AddForce(force, ForceMode.Impulse);
+        currentVelocity += force / rb.mass;
         ApplySpin(spin);
-        Debug.Log($"[BilliardBall] Applied force with spin: {force}, Spin={spin}");
+        UpdateDebugValues();
+        Debug.Log($"[BilliardBall] Applied kinematic force with spin: Velocity={currentVelocity.magnitude:F2}, Spin={spin}");
     }
 
     public void ApplyForceWithCurve(Vector3 force, float curveIntensity, Vector2 spin)
     {
-        // Apply base force
-        rb.AddForce(force, ForceMode.Impulse);
-        
-        // Apply spin (this will set both currentSpin and currentSideSpin)
+        currentVelocity += force / rb.mass;
         ApplySpin(spin);
         
-        // If there's curve intensity but no spin from UI, use legacy curve system
         if (spin.magnitude < 0.01f && Mathf.Abs(curveIntensity) > 0.01f)
         {
             float legacySideSpin = Mathf.Clamp(curveIntensity / 2.0f, -1f, 1f);
@@ -131,58 +133,54 @@ public class BilliardBall : MonoBehaviour
             currentSpin = new Vector2(legacySideSpin, currentSpin.y);
         }
         
-        debugCurrentSideSpin = currentSideSpin;
-        debugCurrentSpin = currentSpin;
-        
-        Debug.Log($"[BilliardBall] Applied curved force with spin: {force}, CurveIntensity={curveIntensity}, Spin={spin}, FinalSpin={currentSpin}");
+        UpdateDebugValues();
+        Debug.Log($"[BilliardBall] Applied kinematic curved force with spin: Velocity={currentVelocity.magnitude:F2}, FinalSpin={currentSpin}");
     }
 
-    // Add explicit method for resetting spin when needed
     public void ApplyForceAndResetSpin(Vector3 force)
     {
-        rb.AddForce(force, ForceMode.Impulse);
+        currentVelocity += force / rb.mass;
         currentSideSpin = 0f;
         currentSpin = Vector2.zero;
-        debugCurrentSideSpin = currentSideSpin;
-        debugCurrentSpin = currentSpin;
-        Debug.Log($"[BilliardBall] Applied straight force with spin reset: {force}");
+        currentAngularVelocity = Vector3.zero;
+        
+        UpdateDebugValues();
+        Debug.Log($"[BilliardBall] Applied kinematic straight force with spin reset: Velocity={currentVelocity.magnitude:F2}");
     }
 
     private void ApplySpin(Vector2 spin)
     {
-        // Store the current spin for Magnus force calculations
         currentSpin = spin;
-        currentSideSpin = spin.x; // X component is side spin
+        currentSideSpin = spin.x;
+        ApplyAngularVelocity(spin);
+        UpdateDebugValues();
         
-        // Apply visual torque for ball rotation
-        Vector3 angular = new Vector3(-spin.y, 0, spin.x) * spinStrength;
-        rb.AddTorque(angular, ForceMode.Impulse);
-        
-        // Update debug values
-        debugCurrentSpin = currentSpin;
-        debugCurrentSideSpin = currentSideSpin;
-        
-        Debug.Log($"[BilliardBall] Applied spin: {spin}, Torque: {angular}, SideSpin: {currentSideSpin}");
+        Debug.Log($"[BilliardBall] Applied spin: {spin}, SideSpin: {currentSideSpin}");
+    }
+
+    private void ApplyAngularVelocity(Vector2 spin)
+    {
+        // Convert spin to angular velocity 
+        Vector3 angularVel = new Vector3(-spin.y, 0, spin.x) * spinStrength;
+        currentAngularVelocity += angularVel;
     }
 
     public bool IsBallMoving()
     {
-        bool isLinearVelocityLow = rb.linearVelocity.magnitude <= stopVelocityThreshold;
-        bool isAngularVelocityLow = rb.angularVelocity.magnitude <= stopVelocityThreshold;
+        bool isLinearVelocityLow = currentVelocity.magnitude <= stopVelocityThreshold;
+        bool isAngularVelocityLow = currentAngularVelocity.magnitude <= stopVelocityThreshold;
         
         bool isMoving = !(isLinearVelocityLow && isAngularVelocityLow);
         
-        // Reset when ball completely stops
         if (!isMoving && wasMovingLastFrame)
         {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            currentVelocity = Vector3.zero;
+            currentAngularVelocity = Vector3.zero;
             currentSideSpin = 0f;
             currentSpin = Vector2.zero;
-            debugCurrentSideSpin = currentSideSpin;
-            debugCurrentSpin = currentSpin;
             
-            Debug.Log("[BilliardBall] Ball stopped, spin reset");
+            UpdateDebugValues();
+            Debug.Log("[BilliardBall] Ball stopped, spin and velocity reset");
         }
         
         wasMovingLastFrame = isMoving;
@@ -191,83 +189,154 @@ public class BilliardBall : MonoBehaviour
 
     void FixedUpdate()
     {
-        debugCurrentSideSpin = currentSideSpin;
-        debugCurrentSpin = currentSpin;
+        UpdateDebugValues();
         
-        // Only apply spin effects if the ball is moving and has spin applied
-        if (rb.linearVelocity.magnitude > stopVelocityThreshold && currentSpin.magnitude > 0.01f)
+        // Apply spin effects 
+        if (currentVelocity.magnitude > stopVelocityThreshold && currentSpin.magnitude > 0.01f)
         {
-            ApplySpinEffects();
+            ApplySpinEffectsKinematic();
             DecaySpin();
         }
+        
+        // Apply damping (friction)
+        ApplyDamping();
+        
+        // Manual position update 
+        Vector3 newPosition = rb.position + currentVelocity * Time.fixedDeltaTime;
+        rb.MovePosition(newPosition);
+        
+        if (currentAngularVelocity.magnitude > 0.01f)
+        {
+            Quaternion deltaRotation = Quaternion.Euler(currentAngularVelocity * Mathf.Rad2Deg * Time.fixedDeltaTime);
+            rb.MoveRotation(rb.rotation * deltaRotation);
+        }
     }
 
-    void ApplySpinEffects()
+    private void ApplySpinEffectsKinematic()
     {
-        Vector3 velocity = rb.linearVelocity;
-        Vector2 velocity2D = new Vector2(velocity.x, velocity.y);
-        
-        if (velocity2D.magnitude < 0.01f) return;
-        
-        // Apply side spin (Magnus force)
+        // Apply Magnus effect (side spin curve)
         if (Mathf.Abs(currentSpin.x) > 0.01f)
         {
-            ApplyMagnusForce();
+            ApplyMagnusEffectKinematic();
         }
         
-        // Apply top/back spin effect (affects velocity magnitude)
+        // Apply top/back spin effect
         if (Mathf.Abs(currentSpin.y) > 0.01f)
         {
-            ApplyTopSpinEffect();
+            ApplyTopSpinEffectKinematic();
         }
     }
 
-    void ApplyMagnusForce()
+    private void ApplyMagnusEffectKinematic()
     {
-        // Get current velocity direction (in XY)
-        Vector3 velocity = rb.linearVelocity;
-        Vector2 velocity2D = new Vector2(velocity.x, velocity.y);
+        if (currentVelocity.magnitude < 0.01f) return;
         
-        if (velocity2D.magnitude < 0.01f) return;
+        // Calculate perpendicular direction for curve
+        Vector3 perpDirection = Vector3.Cross(currentVelocity.normalized, Vector3.forward).normalized;
         
-        // Calculate the perpendicular vector (cross product with Z-axis)
-        Vector3 perpDirection = Vector3.Cross(velocity.normalized, Vector3.forward).normalized;
-
-        // Calculate Force
-        float velocityMultiplier = Mathf.Clamp(velocity2D.magnitude, 1.0f, 12f); // Increased range for stronger effect
-        float magnusForceMagnitude = -currentSpin.x * curveStrength * velocityMultiplier;
-
-        // Apply the force (only in XY plane)
-        Vector3 magnusForce = perpDirection * magnusForceMagnitude;
-        rb.AddForce(magnusForce, ForceMode.Force);
+        // Calculate Magnus effect strength
+        float velocityMultiplier = Mathf.Clamp(currentVelocity.magnitude, 1.0f, 12f);
+        float magnusAcceleration = -currentSpin.x * curveStrength * velocityMultiplier;
         
-        // Debug visualization and logging
-        Debug.DrawRay(transform.position, magnusForce * 0.5f, Color.green, 0.1f);
-        Debug.DrawRay(transform.position, velocity.normalized * 2f, Color.blue, 0.1f);
+        // Apply as direct velocity change (acceleration * deltaTime)
+        Vector3 magnusVelocityChange = perpDirection * magnusAcceleration * Time.fixedDeltaTime;
+        currentVelocity += magnusVelocityChange;
+        
+        // Debug visualization
+        Debug.DrawRay(transform.position, magnusVelocityChange * 10f, Color.green, 0.1f);
+        Debug.DrawRay(transform.position, currentVelocity.normalized * 2f, Color.blue, 0.1f);
+        
         if (Time.fixedTime % 0.5f < Time.fixedDeltaTime)
         {
-            Debug.Log($"[BilliardBall] Magnus Force: {magnusForce.magnitude:F3}, SideSpin: {currentSpin.x:F3}, Velocity: {velocity2D.magnitude:F3}");
+            Debug.Log($"[BilliardBall] Magnus Effect: Acceleration={magnusAcceleration:F3}, SideSpin={currentSpin.x:F3}, Velocity={currentVelocity.magnitude:F3}");
         }
     }
 
-    void ApplyTopSpinEffect()
+    private void ApplyTopSpinEffectKinematic()
     {
-        // Top spin (positive Y) makes ball accelerate, back spin (negative Y) makes it decelerate
-        Vector3 velocity = rb.linearVelocity;
-        Vector3 topSpinForce = velocity.normalized * (currentSpin.y * topSpinEffect);
+        if (currentVelocity.magnitude < 0.01f) return;
         
-        rb.AddForce(topSpinForce, ForceMode.Force);
+        // Top spin accelerates, back spin decelerates
+        Vector3 topSpinAcceleration = currentVelocity.normalized * (currentSpin.y * topSpinEffect);
+        currentVelocity += topSpinAcceleration * Time.fixedDeltaTime;
         
         if (Time.fixedTime % 0.5f < Time.fixedDeltaTime)
         {
-            Debug.Log($"[BilliardBall] Top Spin Force: {topSpinForce.magnitude:F3}, TopSpin: {currentSpin.y:F3}");
+            Debug.Log($"[BilliardBall] Top Spin Effect: Acceleration={topSpinAcceleration.magnitude:F3}, TopSpin={currentSpin.y:F3}");
+        }
+    }
+
+    private void ApplyDamping()
+    {
+        // Apply exponential damping for smooth deceleration
+        float dampingFactor = Mathf.Pow(linearDamping, Time.fixedDeltaTime * 60f);
+        currentVelocity *= dampingFactor;
+        
+        float angularDampingFactor = Mathf.Pow(angularDamping, Time.fixedDeltaTime * 60f);
+        currentAngularVelocity *= angularDampingFactor;
+        
+        // Stop completely if below threshold
+        if (currentVelocity.magnitude < stopVelocityThreshold)
+        {
+            currentVelocity = Vector3.zero;
+        }
+        
+        if (currentAngularVelocity.magnitude < stopVelocityThreshold)
+        {
+            currentAngularVelocity = Vector3.zero;
         }
     }
 
     void DecaySpin()
     {
-        // Decay both spin components
         currentSpin = Vector2.MoveTowards(currentSpin, Vector2.zero, spinDecayRate * Time.fixedDeltaTime);
-        currentSideSpin = currentSpin.x; // Keep side spin in sync
+        currentSideSpin = currentSpin.x;
     }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.contactCount == 0) return;
+        
+        ContactPoint contact = collision.GetContact(0);
+        Vector3 normal = contact.normal;
+        
+        // Reflect velocity off the collision normal
+        Vector3 reflectedVelocity = Vector3.Reflect(currentVelocity, normal);
+        currentVelocity = reflectedVelocity * restitution;
+        
+        // Optionally reduce spin on collision
+        currentSpin *= 0.9f;
+        currentSideSpin = currentSpin.x;
+        currentAngularVelocity *= 0.9f;
+        
+        Debug.Log($"[BilliardBall] Collision with {collision.gameObject.name}: Normal={normal}, NewVelocity={currentVelocity.magnitude:F2}");
+        
+        // Transfer momentum to other kinematic ball
+        var otherBall = collision.rigidbody?.GetComponent<BilliardBall>();
+        if (otherBall != null)
+        {
+            // Calculate impulse transfer between two balls
+            Vector3 relativeVelocity = currentVelocity;
+            Vector3 impulse = relativeVelocity * rb.mass * 0.5f;
+            otherBall.ApplyForce(impulse);
+            
+            // Reduce our velocity by the transferred amount
+            currentVelocity *= 0.5f;
+        }
+        // Transfer to dynamic rigidbody
+        else if (collision.rigidbody != null && !collision.rigidbody.isKinematic)
+        {
+            collision.rigidbody.AddForce(currentVelocity * rb.mass * 0.5f, ForceMode.Impulse);
+        }
+    }
+
+    private void UpdateDebugValues()
+    {
+        debugCurrentSideSpin = currentSideSpin;
+        debugCurrentSpin = currentSpin;
+        debugCurrentVelocity = currentVelocity;
+    }
+
+    // Public property to get current velocity (for trajectory prediction)
+    public Vector3 Velocity => currentVelocity;
 }

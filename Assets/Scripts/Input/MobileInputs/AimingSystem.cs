@@ -83,7 +83,7 @@ public class AimingSystem
         }
         else
         {
-            // detect end of drag and finalize aim using last known valid touch position
+            // detect end of drag for aiming position/ direction
             if (isDragging)
             {
                 isDragging = false;

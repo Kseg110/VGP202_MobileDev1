@@ -64,7 +64,7 @@ public class BilliardController : PhysicsMaterialManager
         base.Start();
         ApplyPhysicsMaterial();
 
-        // Find ShootButton if not assigned
+        // Find ShootButton 
         if (shootButton == null)
         {
             shootButton = FindFirstObjectByType<ShootButton>();
@@ -74,7 +74,7 @@ public class BilliardController : PhysicsMaterialManager
             }
         }
         
-        // Find SpinButton if not assigned
+        // Find SpinButton
         if (spinButton == null)
         {
             spinButton = FindFirstObjectByType<SpinButton>();
@@ -84,7 +84,6 @@ public class BilliardController : PhysicsMaterialManager
             }
         }
         
-        // Setup shoot button connection
         SetupShootButton();
 
         if (InputManager.Instance != null)
@@ -130,7 +129,7 @@ public class BilliardController : PhysicsMaterialManager
         // Check if ball just stopped moving to reset spin
         if (ballWasMovingLastFrame && !isBallMoving)
         {
-            // Ball just stopped, reset spin using the correct reference
+            // Ball stopped, reset spin 
             if (spinButton != null)
             {
                 spinButton.ResetSpin();
@@ -151,7 +150,7 @@ public class BilliardController : PhysicsMaterialManager
             return;
         }
 
-        // Temporarily disable aiming while pause menu or spin UI are open to prevent conflicts
+        // Temporarily disable aiming while UI is open
         var canvasMgr = FindAnyObjectByType<GameCanvasManager>();
         if (canvasMgr != null && canvasMgr.pauseMenuPanel != null && canvasMgr.pauseMenuPanel.activeSelf)
         {
@@ -161,7 +160,7 @@ public class BilliardController : PhysicsMaterialManager
             return;
         }
 
-        // Use the assigned spinButton reference instead of FindFirstObjectByType
+        // Use the assigned spinButton
         if (spinButton != null && spinButton.IsOpen)
         {
             aimLine.enabled = false;
@@ -236,7 +235,6 @@ public class BilliardController : PhysicsMaterialManager
         if (spinButton != null && spin.magnitude > 0.1f)
         {
             Debug.Log($"Applying spin: X={spin.x:F2}, Y={spin.y:F2}");
-            // You could add visual feedback here, like particle effects
         }
 
         // Apply force with spin
@@ -253,7 +251,7 @@ public class BilliardController : PhysicsMaterialManager
             billiardBall.ApplyForce(baseForce, spin);
         }
 
-        // Decrement shots in GameManager
+        // Decrement shots from GameManager
         if (GameManager.Instance != null)
         {
             GameManager.Instance.Shots--;
@@ -317,7 +315,7 @@ public class BilliardController : PhysicsMaterialManager
         DrawAimLine(aimingSystem.CurrentAimLineLength);
         RotateArrow();
 
-        // Enhanced color logic that considers spin
+        // Enhanced color logic for spin visuals
         Color lineColor;
         Vector2 currentSpin = spinButton?.GetSpinNormalized() ?? Vector2.zero;
         bool hasSignificantSpin = currentSpin.magnitude > 0.1f;
@@ -372,7 +370,8 @@ public class BilliardController : PhysicsMaterialManager
     private float CalculateSpinCurveIntensity(Vector2 spin)
     {
         // Convert spin magnitude to curve intensity
-        // X spin affects left/right curve, Y spin could affect trajectory height/drop
+        // X spin affects left/right curve
+        // Y spin could affect trajectory height/drop
         float spinMagnitude = spin.magnitude;
         float maxSpinCurve = 4.0f; // Maximum curve effect from spin
         
@@ -384,7 +383,7 @@ public class BilliardController : PhysicsMaterialManager
         if (spin.magnitude < 0.1f) return baseVelocity;
 
         // Apply spin effect to velocity
-        // X spin creates lateral curve, Y spin affects trajectory arc
+        // X spin creates lateral curve
         Vector3 perpendicular = Vector3.Cross(baseVelocity.normalized, Vector3.forward).normalized;
         float curveForce = spin.x * 0.3f; // Adjust multiplier for desired curve strength
         
@@ -393,7 +392,7 @@ public class BilliardController : PhysicsMaterialManager
         // Y spin could affect the velocity magnitude or add vertical component
         if (Mathf.Abs(spin.y) > 0.1f)
         {
-            // Modify velocity magnitude based on Y spin (topspin/backspin effect)
+            // Modify velocity magnitude based on Y spin positioning in UI
             float spinModifier = 1.0f + (spin.y * 0.2f);
             baseVelocity *= spinModifier;
         }
@@ -534,5 +533,11 @@ public class BilliardController : PhysicsMaterialManager
         {
             ballCollider.material = GetBallMaterial();
         }
+    }
+
+    // Add this method to get current velocity for predictions
+    public Vector3 GetCurrentVelocity()
+    {
+        return billiardBall.Velocity;
     }
 }

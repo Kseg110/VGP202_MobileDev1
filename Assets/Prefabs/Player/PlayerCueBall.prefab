@@ -143,7 +143,7 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 1
-  m_IsKinematic: 0
+  m_IsKinematic: 1
   m_Interpolate: 0
   m_Constraints: 4
   m_CollisionDetection: 0
@@ -287,6 +287,7 @@ MonoBehaviour:
     maxCurveAngle: 30
   rigidbodyConfig:
     useGravity: 0
+    isKinematic: 0
     linearDamping: 1
     angularDamping: 2
     constraints: 56
@@ -297,6 +298,7 @@ MonoBehaviour:
   curveColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   powerBar: {fileID: 8910901106363009479}
   shootButton: {fileID: 0}
+  spinButton: {fileID: 0}
 --- !u!114 &4264112315531624967
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -330,7 +332,10 @@ MonoBehaviour:
   curveStrength: 5
   spinDecayRate: 2
   stopVelocityThreshold: 0.1
+  spinStrength: 15
+  topSpinEffect: 8
   debugCurrentSideSpin: 0
+  debugCurrentSpin: {x: 0, y: 0}
   currentSideSpin: 1
 --- !u!1 &3688857442657307608
 GameObject:

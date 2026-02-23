@@ -77,9 +77,17 @@ public abstract class EnemyBallBase : MonoBehaviour
         return isMoving;
     }
 
+    // Add similar kinematic support
     public virtual void ApplyForce(Vector3 impulse)
     {
-        rb.AddForce(impulse, ForceMode.Impulse);
+        if (rb.isKinematic)
+        {
+            // Store and apply velocity manually (see pattern above)
+        }
+        else
+        {
+            rb.AddForce(impulse, ForceMode.Impulse);
+        }
         //Debug.Log($"[EnemyBallBase] ApplyForce impulse={impulse}");
     }
 
