@@ -19,6 +19,9 @@ public class SpinButton : MonoBehaviour
     // Emits normalized spin in range [-1..1] for X and Y relative to the ball center
     public event Action<Vector2> OnSpinChanged;
 
+    // Expose state so other systems can query whether the UI is open
+    public bool IsOpen => isOpen;
+
     private bool isOpen;
 
     private void Awake()

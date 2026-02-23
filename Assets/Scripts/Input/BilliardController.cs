@@ -123,6 +123,25 @@ public class BilliardController : PhysicsMaterialManager
             return;
         }
 
+        // Temporarily disable aiming while pause menu or spin UI are open to prevent conflicts
+        var canvasMgr = FindAnyObjectByType<GameCanvasManager>();
+        if (canvasMgr != null && canvasMgr.pauseMenuPanel != null && canvasMgr.pauseMenuPanel.activeSelf)
+        {
+            aimLine.enabled = false;
+            arrowIndicator.gameObject.SetActive(false);
+            trajectoryProjection?.HideCurvePreview();
+            return;
+        }
+
+        var spinBtn = FindFirstObjectByType<SpinButton>();
+        if (spinBtn != null && spinBtn.IsOpen)
+        {
+            aimLine.enabled = false;
+            arrowIndicator.gameObject.SetActive(false);
+            trajectoryProjection?.HideCurvePreview();
+            return;
+        }
+
         aimingSystem.UpdateAiming();
         
         // Handle charging if in charging state
