@@ -200,9 +200,10 @@ public class Projection : PhysicsMaterialManager
         DestroyImmediate(ghostObj.gameObject);
     }
 
-    public void ShowCurvePreview(Vector3 startPos, Vector3 velocity, float curveIntensity)
+    // New method specifically for spin-based trajectory preview
+    public void ShowSpinCurvePreview(Vector3 startPos, Vector3 velocity, float curveIntensity, Vector2 spin)
     {
-        if (Mathf.Abs(curveIntensity) < 0.1f)
+        if (spin.magnitude < 0.1f && Mathf.Abs(curveIntensity) < 0.1f)
         {
             _curvePreviewLine.enabled = false;
             return;
@@ -210,13 +211,93 @@ public class Projection : PhysicsMaterialManager
 
         _curvePreviewLine.enabled = true;
         
-        // Calculate curved trajectory preview using physics-based simulation
+        // Calculate spin-influenced trajectory preview
         for (int i = 0; i < _curvePreviewLine.positionCount; i++)
         {
             float t = i / (float)(_curvePreviewLine.positionCount - 1);
-            Vector3 position = CalculateCurvedPosition(startPos, velocity, curveIntensity, t);
+            Vector3 position = CalculateSpinCurvedPosition(startPos, velocity, curveIntensity, spin, t);
             _curvePreviewLine.SetPosition(i, position);
         }
+        
+        // Update line color based on spin type
+        UpdateCurveLineColor(spin);
+    }
+
+    private void UpdateCurveLineColor(Vector2 spin)
+    {
+        Color startColor, endColor;
+        
+        if (spin.magnitude > 0.1f)
+        {
+            // Different colors for different spin types
+            if (Mathf.Abs(spin.x) > Mathf.Abs(spin.y))
+            {
+                // Lateral spin (sidespin)
+                startColor = spin.x > 0 ? Color.cyan : Color.magenta; // Right spin = cyan, Left spin = magenta
+                endColor = Color.Lerp(startColor, Color.white, 0.3f);
+            }
+            else
+            {
+                // Vertical spin (topspin/backspin)
+                startColor = spin.y > 0 ? Color.green : Color.red; // Topspin = green, Backspin = red
+                endColor = Color.Lerp(startColor, Color.white, 0.3f);
+            }
+        }
+        else
+        {
+            // Default curve colors
+            startColor = Color.yellow;
+            endColor = Color.orange;
+        }
+        
+        _curvePreviewLine.startColor = startColor;
+        _curvePreviewLine.endColor = endColor;
+    }
+
+    private Vector3 CalculateSpinCurvedPosition(Vector3 startPos, Vector3 velocity, float curveIntensity, Vector2 spin, float t)
+    {
+        float maxTime = 3.0f; // Maximum preview time
+        float currentTime = t * maxTime;
+        
+        // Base position with velocity and drag
+        Vector3 basePos = startPos + velocity * currentTime * (1 - currentTime * 0.3f);
+        
+        // Apply spin effects
+        Vector3 finalPos = basePos;
+        
+        // X spin creates lateral curve (sidespin)
+        if (Mathf.Abs(spin.x) > 0.1f)
+        {
+            Vector3 perpendicular = Vector3.Cross(velocity.normalized, Vector3.forward).normalized;
+            float spinDecay = Mathf.Exp(-currentTime * 1.5f); // Gradual decay
+            float lateralEffect = spin.x * currentTime * currentTime * 0.4f * spinDecay;
+            finalPos += perpendicular * lateralEffect;
+        }
+        
+        // Y spin affects trajectory arc (topspin/backspin)
+        if (Mathf.Abs(spin.y) > 0.1f)
+        {
+            float heightDecay = Mathf.Exp(-currentTime * 2f);
+            float verticalEffect = spin.y * Mathf.Sin(currentTime * 2f) * 0.2f * heightDecay;
+            finalPos += Vector3.up * verticalEffect;
+        }
+        
+        // Add traditional curve effect if present
+        if (Mathf.Abs(curveIntensity) > 0.1f)
+        {
+            Vector3 perpendicular = Vector3.Cross(velocity.normalized, Vector3.forward).normalized;
+            float curveDecay = Mathf.Exp(-currentTime * 2f);
+            float curveEffect = curveIntensity * currentTime * currentTime * 0.3f * curveDecay;
+            finalPos += perpendicular * curveEffect;
+        }
+        
+        return finalPos;
+    }
+
+    public void ShowCurvePreview(Vector3 startPos, Vector3 velocity, float curveIntensity)
+    {
+        // Fallback to original method for compatibility
+        ShowSpinCurvePreview(startPos, velocity, curveIntensity, Vector2.zero);
     }
 
     private Vector3 CalculateCurvedPosition(Vector3 startPos, Vector3 velocity, float curveIntensity, float t)

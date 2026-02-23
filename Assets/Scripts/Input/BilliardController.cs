@@ -240,7 +240,11 @@ public class BilliardController : PhysicsMaterialManager
         }
 
         // Apply force with spin
-        if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
+        if (HasSignificantSpin())
+        {
+            billiardBall.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity, spin);
+        }
+        else if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
         {
             billiardBall.ApplyForceWithCurve(baseForce, aimingSystem.CurveIntensity, spin);
         }
@@ -294,6 +298,13 @@ public class BilliardController : PhysicsMaterialManager
         trajectoryProjection?.HideCurvePreview();
     }
 
+    private bool HasSignificantSpin()
+    {
+        if (spinButton == null) return false;
+        Vector2 spin = spinButton.GetSpinNormalized();
+        return spin.magnitude > 0.1f;
+    }
+
     private void UpdateVisuals()
     {
         bool showAiming = !billiardBall.IsBallMoving();
@@ -333,17 +344,61 @@ public class BilliardController : PhysicsMaterialManager
 
     private void UpdateTrajectoryPreview()
     {
-        if (trajectoryProjection != null && aimingSystem.IsCurveShotActive)
+        if (trajectoryProjection == null) return;
+
+        Vector2 currentSpin = spinButton?.GetSpinNormalized() ?? Vector2.zero;
+        bool hasSignificantSpin = currentSpin.magnitude > 0.1f;
+
+        if (hasSignificantSpin || (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f))
         {
             Vector3 baseVelocity = aimingSystem.AimDirection * (currentPower > 0 ? currentPower : 1f);
-            Vector3 curvedVelocity = aimingSystem.GetCurvedVelocity(baseVelocity);
             
-            trajectoryProjection.ShowCurvePreview(transform.position, curvedVelocity, aimingSystem.CurveIntensity);
+            // Calculate spin-based curve intensity
+            float spinCurveIntensity = CalculateSpinCurveIntensity(currentSpin);
+            
+            // Combine traditional curve with spin curve (spin takes priority)
+            float totalCurveIntensity = hasSignificantSpin ? spinCurveIntensity : aimingSystem.CurveIntensity;
+            
+            Vector3 curvedVelocity = GetSpinAdjustedVelocity(baseVelocity, currentSpin);
+            
+            trajectoryProjection.ShowSpinCurvePreview(transform.position, curvedVelocity, totalCurveIntensity, currentSpin);
         }
         else
         {
-            trajectoryProjection?.HideCurvePreview();
+            trajectoryProjection.HideCurvePreview();
         }
+    }
+
+    private float CalculateSpinCurveIntensity(Vector2 spin)
+    {
+        // Convert spin magnitude to curve intensity
+        // X spin affects left/right curve, Y spin could affect trajectory height/drop
+        float spinMagnitude = spin.magnitude;
+        float maxSpinCurve = 4.0f; // Maximum curve effect from spin
+        
+        return spin.x * maxSpinCurve; // Positive X = right curve, Negative X = left curve
+    }
+
+    private Vector3 GetSpinAdjustedVelocity(Vector3 baseVelocity, Vector2 spin)
+    {
+        if (spin.magnitude < 0.1f) return baseVelocity;
+
+        // Apply spin effect to velocity
+        // X spin creates lateral curve, Y spin affects trajectory arc
+        Vector3 perpendicular = Vector3.Cross(baseVelocity.normalized, Vector3.forward).normalized;
+        float curveForce = spin.x * 0.3f; // Adjust multiplier for desired curve strength
+        
+        Vector3 spinEffect = perpendicular * curveForce;
+        
+        // Y spin could affect the velocity magnitude or add vertical component
+        if (Mathf.Abs(spin.y) > 0.1f)
+        {
+            // Modify velocity magnitude based on Y spin (topspin/backspin effect)
+            float spinModifier = 1.0f + (spin.y * 0.2f);
+            baseVelocity *= spinModifier;
+        }
+        
+        return baseVelocity + spinEffect;
     }
 
     private void RotateArrow()
@@ -357,13 +412,57 @@ public class BilliardController : PhysicsMaterialManager
 
     private void DrawAimLine(float length)
     {
-        if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
+        Vector2 currentSpin = spinButton?.GetSpinNormalized() ?? Vector2.zero;
+        bool hasSignificantSpin = currentSpin.magnitude > 0.1f;
+
+        if (hasSignificantSpin)
+        {
+            DrawSpinCurvedAimLine(length, currentSpin);
+        }
+        else if (aimingSystem.IsCurveShotActive && Mathf.Abs(aimingSystem.CurveIntensity) > 0.1f)
         {
             DrawCurvedAimLine(length);
         }
         else
         {
             DrawStraightAimLine(length);
+        }
+    }
+
+    private void DrawSpinCurvedAimLine(float length, Vector2 spin)
+    {
+        int points = 15;
+        Vector3[] curvePoints = new Vector3[points];
+        
+        Vector3 startPos = transform.position + Vector3.up * 0.05f;
+        Vector3 direction = aimingSystem.AimDirection;
+        
+        for (int i = 0; i < points; i++)
+        {
+            float t = i / (float)(points - 1);
+            float distance = length * t;
+            
+            // Base position along aim direction
+            Vector3 basePoint = startPos + direction * distance;
+            
+            // Apply spin curve effect
+            Vector3 perpendicular = Vector3.Cross(direction, Vector3.forward).normalized;
+            
+            // Create a smooth curve based on spin
+            float curveAmount = Mathf.Sin(t * Mathf.PI) * spin.x * (length * 0.15f);
+            Vector3 curveOffset = perpendicular * curveAmount;
+            
+            // Apply Y spin as trajectory modification (height variation)
+            float heightOffset = spin.y * Mathf.Sin(t * Mathf.PI) * 0.1f;
+            Vector3 spinPoint = basePoint + curveOffset + Vector3.up * heightOffset;
+            
+            curvePoints[i] = spinPoint;
+        }
+        
+        aimLine.positionCount = points;
+        for (int i = 0; i < points; i++)
+        {
+            aimLine.SetPosition(i, curvePoints[i]);
         }
     }
 
