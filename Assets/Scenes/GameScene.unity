@@ -1886,6 +1886,39 @@ Transform:
   - {fileID: 7565677573913583539}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &855549071 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7011014460131457994, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
+  m_PrefabInstance: {fileID: 1791865750}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &855549072 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5620278588403535734, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
+  m_PrefabInstance: {fileID: 1791865750}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 855549071}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!114 &855549073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 855549071}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1123d2b1d0d65e14e894c37699270045, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpinButton
+  spinButton: {fileID: 855549072}
+  spinUIPanel: {fileID: 1097236128962301507}
+  ballRect: {fileID: 1097236128962301510}
+  spinIndicator: {fileID: 1097236128962301509}
+  rootCanvas: {fileID: 1097236128962301508}
 --- !u!1 &862483826
 GameObject:
   m_ObjectHideFlags: 0
@@ -2048,12 +2081,12 @@ GameObject:
   - component: {fileID: 1087313619}
   - component: {fileID: 1087313618}
   m_Layer: 0
-  m_Name: AudioSource
+  m_Name: PopSFX
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!82 &1087313618
 AudioSource:
   m_ObjectHideFlags: 0
@@ -2709,7 +2742,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7011014460131457994, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 855549073}
   m_SourcePrefab: {fileID: 100100000, guid: acbe807d5f7a1e14ab541f27b6c0945d, type: 3}
 --- !u!114 &1791865751 stripped
 MonoBehaviour:
@@ -2962,6 +2998,26 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2266d7cb670fb0047802c07a4a08e17c, type: 3}
+--- !u!1 &1097236128962301507 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6639495788982341474, guid: 2266d7cb670fb0047802c07a4a08e17c, type: 3}
+  m_PrefabInstance: {fileID: 1097236128962301506}
+  m_PrefabAsset: {fileID: 0}
+--- !u!223 &1097236128962301508 stripped
+Canvas:
+  m_CorrespondingSourceObject: {fileID: 4412763484381070424, guid: 2266d7cb670fb0047802c07a4a08e17c, type: 3}
+  m_PrefabInstance: {fileID: 1097236128962301506}
+  m_PrefabAsset: {fileID: 0}
+--- !u!224 &1097236128962301509 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 5504837710144018159, guid: 2266d7cb670fb0047802c07a4a08e17c, type: 3}
+  m_PrefabInstance: {fileID: 1097236128962301506}
+  m_PrefabAsset: {fileID: 0}
+--- !u!224 &1097236128962301510 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4824518857083477826, guid: 2266d7cb670fb0047802c07a4a08e17c, type: 3}
+  m_PrefabInstance: {fileID: 1097236128962301506}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1164584677554542309
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3115,5 +3171,5 @@ SceneRoots:
   - {fileID: 1267732003}
   - {fileID: 801261105}
   - {fileID: 19549175}
-  - {fileID: 1097236128962301506}
   - {fileID: 1087313619}
+  - {fileID: 1097236128962301506}
