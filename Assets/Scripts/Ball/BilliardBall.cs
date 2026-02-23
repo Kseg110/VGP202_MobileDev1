@@ -4,15 +4,23 @@ using UnityEngine;
 public class BilliardBall : MonoBehaviour
 {
     [Header("Settings")]
-    public float curveStrength = 8.0f; // Reduced from 15.0f for more balanced curve
-    public float spinDecayRate = 1.0f; // Reduced from 2.0f (spin lasts longer)
+    public float curveStrength = 15.0f; // Increased from 8.0f for more noticeable curves
+    public float spinDecayRate = 0.5f; // Reduced from 1.0f so spin lasts longer
     public float stopVelocityThreshold = 0.1f;
+
+    [Header("Spin Settings")]
+    public float spinStrength = 15f; // Increased from 10f for more visual spin
+    public float topSpinEffect = 8f; // Increased from 5f for more top spin effect
 
     [Header("State - Debug Info")]
     [SerializeField] private float debugCurrentSideSpin = 0f; // For inspector visibility
+    [SerializeField] private Vector2 debugCurrentSpin = Vector2.zero; // For inspector visibility
     
     // Range: -1 (Max Right Spin) to 1 (Max Left Spin)
-    public float currentSideSpin = 0f; 
+    public float currentSideSpin = 0f;
+    
+    // Current 2D spin values from UI
+    private Vector2 currentSpin = Vector2.zero;
 
     private Rigidbody rb;
     private bool wasMovingLastFrame = false;
@@ -26,6 +34,7 @@ public class BilliardBall : MonoBehaviour
     {
         Debug.Log($"[BilliardBall] Initialized with curveStrength: {curveStrength}, spinDecayRate: {spinDecayRate}");
     }
+    
     public void Initialize(Rigidbody rigidbody, MonoBehaviour ownerMonoBehaviour = null)
     {
         rb = rigidbody;
@@ -39,33 +48,43 @@ public class BilliardBall : MonoBehaviour
 
         // Set the side spin 
         currentSideSpin = sideSpin;
+        currentSpin = new Vector2(sideSpin, 0f); // Convert to 2D spin
         debugCurrentSideSpin = currentSideSpin;
+        debugCurrentSpin = currentSpin;
         
         Debug.Log($"[BilliardBall] Shot applied: Direction={direction}, Power={power}, Spin={sideSpin}");
     }
 
-    // Compatibility methods for existing BallMovement interface
+    // Legacy compatibility method - FIXED to apply current spin when no explicit spin is provided
     public void ApplyForce(Vector3 force)
     {
         rb.AddForce(force, ForceMode.Impulse);
-        currentSideSpin = 0f; // No spin for straight shots
-        debugCurrentSideSpin = currentSideSpin;
-        Debug.Log($"[BilliardBall] Applied straight force: {force}");
+        
+        // Apply current spin if it exists (from UI)
+        if (currentSpin.magnitude > 0.01f)
+        {
+            Vector3 angular = new Vector3(-currentSpin.y, 0, currentSpin.x) * spinStrength;
+            rb.AddTorque(angular, ForceMode.Impulse);
+            Debug.Log($"[BilliardBall] Applied existing spin: {currentSpin}, Torque: {angular}");
+        }
+        
+        Debug.Log($"[BilliardBall] Applied force: {force}, PreservingSpin={currentSpin}");
     }
 
     // Existing two-argument API (kept for compatibility)
     public void ApplyForceWithCurve(Vector3 baseForce, float curveIntensity)
     {
         // Convert curve intensity to side spin - slightly more conservative conversion
-        float sideSpin = Mathf.Clamp(curveIntensity / 2.5f, -1f, 1f); // Changed from /2.0f to /2.5f for gentler curves
+        float sideSpin = Mathf.Clamp(curveIntensity / 2.0f, -1f, 1f); // Changed back to 2.0f for stronger curves
         
         rb.AddForce(baseForce, ForceMode.Impulse);
         currentSideSpin = sideSpin;
+        currentSpin = new Vector2(sideSpin, currentSpin.y); // Preserve Y spin from UI
         debugCurrentSideSpin = currentSideSpin;
+        debugCurrentSpin = currentSpin;
         
         Debug.Log($"[BilliardBall] Applied curved force: {baseForce}, Spin={sideSpin}, CurveIntensity={curveIntensity}");
     }
-
 
     public void ApplyForceWithCurve(Vector3 baseForce, Vector3 lateralDirection, float lateralIntensity)
     {
@@ -79,10 +98,12 @@ public class BilliardBall : MonoBehaviour
         }
 
         // Map lateralIntensity for sidespin
-        float sideSpin = Mathf.Clamp((lateralIntensity / 2.5f) * sign, -1f, 1f);
+        float sideSpin = Mathf.Clamp((lateralIntensity / 2.0f) * sign, -1f, 1f);
 
         currentSideSpin = sideSpin;
+        currentSpin = new Vector2(sideSpin, currentSpin.y); // Preserve Y spin from UI
         debugCurrentSideSpin = currentSideSpin;
+        debugCurrentSpin = currentSpin;
 
         Debug.Log($"[BilliardBall] Applied curved force (3-arg): {baseForce}, LateralDir={lateralDirection}, Intensity={lateralIntensity}, Spin={sideSpin}");
     }
@@ -91,21 +112,57 @@ public class BilliardBall : MonoBehaviour
     {
         rb.AddForce(force, ForceMode.Impulse);
         ApplySpin(spin);
+        Debug.Log($"[BilliardBall] Applied force with spin: {force}, Spin={spin}");
     }
 
     public void ApplyForceWithCurve(Vector3 force, float curveIntensity, Vector2 spin)
     {
-        // existing curve logic...
+        // Apply base force
         rb.AddForce(force, ForceMode.Impulse);
+        
+        // Apply spin (this will set both currentSpin and currentSideSpin)
         ApplySpin(spin);
+        
+        // If there's curve intensity but no spin from UI, use legacy curve system
+        if (spin.magnitude < 0.01f && Mathf.Abs(curveIntensity) > 0.01f)
+        {
+            float legacySideSpin = Mathf.Clamp(curveIntensity / 2.0f, -1f, 1f);
+            currentSideSpin = legacySideSpin;
+            currentSpin = new Vector2(legacySideSpin, currentSpin.y);
+        }
+        
+        debugCurrentSideSpin = currentSideSpin;
+        debugCurrentSpin = currentSpin;
+        
+        Debug.Log($"[BilliardBall] Applied curved force with spin: {force}, CurveIntensity={curveIntensity}, Spin={spin}, FinalSpin={currentSpin}");
+    }
+
+    // Add explicit method for resetting spin when needed
+    public void ApplyForceAndResetSpin(Vector3 force)
+    {
+        rb.AddForce(force, ForceMode.Impulse);
+        currentSideSpin = 0f;
+        currentSpin = Vector2.zero;
+        debugCurrentSideSpin = currentSideSpin;
+        debugCurrentSpin = currentSpin;
+        Debug.Log($"[BilliardBall] Applied straight force with spin reset: {force}");
     }
 
     private void ApplySpin(Vector2 spin)
     {
-        // Map spin.x to side spin (z axis), spin.y to top/back spin (x axis)
-        float spinStrength = 10f; // tweak as needed
+        // Store the current spin for Magnus force calculations
+        currentSpin = spin;
+        currentSideSpin = spin.x; // X component is side spin
+        
+        // Apply visual torque for ball rotation
         Vector3 angular = new Vector3(-spin.y, 0, spin.x) * spinStrength;
         rb.AddTorque(angular, ForceMode.Impulse);
+        
+        // Update debug values
+        debugCurrentSpin = currentSpin;
+        debugCurrentSideSpin = currentSideSpin;
+        
+        Debug.Log($"[BilliardBall] Applied spin: {spin}, Torque: {angular}, SideSpin: {currentSideSpin}");
     }
 
     public bool IsBallMoving()
@@ -121,7 +178,9 @@ public class BilliardBall : MonoBehaviour
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
             currentSideSpin = 0f;
+            currentSpin = Vector2.zero;
             debugCurrentSideSpin = currentSideSpin;
+            debugCurrentSpin = currentSpin;
             
             Debug.Log("[BilliardBall] Ball stopped, spin reset");
         }
@@ -133,12 +192,33 @@ public class BilliardBall : MonoBehaviour
     void FixedUpdate()
     {
         debugCurrentSideSpin = currentSideSpin;
+        debugCurrentSpin = currentSpin;
         
-        // Only apply curve if the ball is moving and has spin applied
-        if (rb.linearVelocity.magnitude > stopVelocityThreshold && Mathf.Abs(currentSideSpin) > 0.01f)
+        // Only apply spin effects if the ball is moving and has spin applied
+        if (rb.linearVelocity.magnitude > stopVelocityThreshold && currentSpin.magnitude > 0.01f)
+        {
+            ApplySpinEffects();
+            DecaySpin();
+        }
+    }
+
+    void ApplySpinEffects()
+    {
+        Vector3 velocity = rb.linearVelocity;
+        Vector2 velocity2D = new Vector2(velocity.x, velocity.y);
+        
+        if (velocity2D.magnitude < 0.01f) return;
+        
+        // Apply side spin (Magnus force)
+        if (Mathf.Abs(currentSpin.x) > 0.01f)
         {
             ApplyMagnusForce();
-            DecaySpin();
+        }
+        
+        // Apply top/back spin effect (affects velocity magnitude)
+        if (Mathf.Abs(currentSpin.y) > 0.01f)
+        {
+            ApplyTopSpinEffect();
         }
     }
 
@@ -154,9 +234,8 @@ public class BilliardBall : MonoBehaviour
         Vector3 perpDirection = Vector3.Cross(velocity.normalized, Vector3.forward).normalized;
 
         // Calculate Force
-        // force should be proportional to velocity 
-        float velocityMultiplier = Mathf.Clamp(velocity2D.magnitude, 0.8f, 8f); // Reduced max clamp for gentler curves
-        float magnusForceMagnitude = -currentSideSpin * curveStrength * velocityMultiplier; // Added negative sign here
+        float velocityMultiplier = Mathf.Clamp(velocity2D.magnitude, 1.0f, 12f); // Increased range for stronger effect
+        float magnusForceMagnitude = -currentSpin.x * curveStrength * velocityMultiplier;
 
         // Apply the force (only in XY plane)
         Vector3 magnusForce = perpDirection * magnusForceMagnitude;
@@ -167,15 +246,28 @@ public class BilliardBall : MonoBehaviour
         Debug.DrawRay(transform.position, velocity.normalized * 2f, Color.blue, 0.1f);
         if (Time.fixedTime % 0.5f < Time.fixedDeltaTime)
         {
-            Debug.Log($"[BilliardBall] Magnus Force: {magnusForce.magnitude:F3}, Spin: {currentSideSpin:F3}, Velocity: {velocity2D.magnitude:F3}");
+            Debug.Log($"[BilliardBall] Magnus Force: {magnusForce.magnitude:F3}, SideSpin: {currentSpin.x:F3}, Velocity: {velocity2D.magnitude:F3}");
+        }
+    }
+
+    void ApplyTopSpinEffect()
+    {
+        // Top spin (positive Y) makes ball accelerate, back spin (negative Y) makes it decelerate
+        Vector3 velocity = rb.linearVelocity;
+        Vector3 topSpinForce = velocity.normalized * (currentSpin.y * topSpinEffect);
+        
+        rb.AddForce(topSpinForce, ForceMode.Force);
+        
+        if (Time.fixedTime % 0.5f < Time.fixedDeltaTime)
+        {
+            Debug.Log($"[BilliardBall] Top Spin Force: {topSpinForce.magnitude:F3}, TopSpin: {currentSpin.y:F3}");
         }
     }
 
     void DecaySpin()
     {
-        // Linearly decay the spin over time so the curve straightens out
-        currentSideSpin = Mathf.MoveTowards(currentSideSpin, 0, spinDecayRate * Time.fixedDeltaTime);
+        // Decay both spin components
+        currentSpin = Vector2.MoveTowards(currentSpin, Vector2.zero, spinDecayRate * Time.fixedDeltaTime);
+        currentSideSpin = currentSpin.x; // Keep side spin in sync
     }
-
-   
 }

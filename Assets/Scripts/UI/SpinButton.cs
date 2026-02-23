@@ -25,6 +25,7 @@ public class SpinButton : MonoBehaviour
 
     private bool isOpen;
     private bool buttonClickedThisFrame; // Track if button was clicked this frame
+    private Vector2 persistentSpin = Vector2.zero; // Store spin even when panel is closed
 
     private void Awake()
     {
@@ -46,6 +47,7 @@ public class SpinButton : MonoBehaviour
         if (spinUIPanel != null)
             spinUIPanel.SetActive(false);
 
+        // Only center on game start, not every time panel opens
         CenterIndicator();
     }
 
@@ -165,8 +167,13 @@ public class SpinButton : MonoBehaviour
 
         if (isOpen)
         {
-            // ensure indicator is visible and centered when opened
-            CenterIndicator();
+            // Restore the persistent spin position when opening, don't center it
+            RestoreSpinIndicator();
+        }
+        else
+        {
+            // Save current spin when closing panel
+            persistentSpin = GetSpinNormalized();
         }
     }
 
@@ -200,19 +207,30 @@ public class SpinButton : MonoBehaviour
         Vector2 normalized = radius > 0f ? new Vector2(anchoredPos.x / radius, anchoredPos.y / radius) : Vector2.zero;
         normalized = Vector2.ClampMagnitude(normalized, 1f);
 
+        // Update persistent spin
+        persistentSpin = normalized;
+        
         OnSpinChanged?.Invoke(normalized);
     }
 
     // Returns currently selected spin normalized to [-1..1] per axis (0 = center)
     public Vector2 GetSpinNormalized()
     {
-        if (ballRect == null || spinIndicator == null)
-            return Vector2.zero;
+        // Return persistent spin regardless of whether panel is open or closed
+        return persistentSpin;
+    }
 
-        float radius = Mathf.Min(ballRect.rect.width, ballRect.rect.height) * 0.5f - Mathf.Min(spinIndicator.rect.width, spinIndicator.rect.height) * 0.5f;
-        if (radius <= 0f) return Vector2.zero;
-        Vector2 anchored = spinIndicator.anchoredPosition;
-        return Vector2.ClampMagnitude(new Vector2(anchored.x / radius, anchored.y / radius), 1f);
+    // Public method to reset spin (called by BilliardController when ball stops)
+    public void ResetSpin()
+    {
+        persistentSpin = Vector2.zero;
+        
+        if (spinIndicator != null)
+            spinIndicator.anchoredPosition = Vector2.zero;
+
+        OnSpinChanged?.Invoke(Vector2.zero);
+        
+        Debug.Log("[SpinButton] Spin reset after ball stopped");
     }
 
     private void CenterIndicator()
@@ -220,7 +238,23 @@ public class SpinButton : MonoBehaviour
         if (spinIndicator != null)
             spinIndicator.anchoredPosition = Vector2.zero;
 
+        persistentSpin = Vector2.zero;
         OnSpinChanged?.Invoke(Vector2.zero);
+    }
+
+    private void RestoreSpinIndicator()
+    {
+        if (spinIndicator == null || ballRect == null)
+            return;
+
+        // Convert persistent spin back to indicator position
+        float radius = Mathf.Min(ballRect.rect.width, ballRect.rect.height) * 0.5f - Mathf.Min(spinIndicator.rect.width, spinIndicator.rect.height) * 0.5f;
+        radius = Mathf.Max(0f, radius);
+
+        Vector2 indicatorPos = persistentSpin * radius;
+        spinIndicator.anchoredPosition = indicatorPos;
+        
+        Debug.Log($"[SpinButton] Restored spin indicator to: {persistentSpin}, Position: {indicatorPos}");
     }
 
     private void OnDestroy()

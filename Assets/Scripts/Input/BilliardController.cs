@@ -32,6 +32,7 @@ public class BilliardController : PhysicsMaterialManager
 
     private bool isCharging;
     private float currentPower;
+    private bool ballWasMovingLastFrame = false; // Track ball movement for spin reset
 
     public float PowerPercentage => currentPower / maxPower;
 
@@ -70,6 +71,16 @@ public class BilliardController : PhysicsMaterialManager
             if (shootButton == null)
             {
                 //Debug.LogWarning("[BilliardController] ShootButton not found in scene!");
+            }
+        }
+        
+        // Find SpinButton if not assigned
+        if (spinButton == null)
+        {
+            spinButton = FindFirstObjectByType<SpinButton>();
+            if (spinButton == null)
+            {
+                Debug.LogWarning("[BilliardController] SpinButton not found in scene!");
             }
         }
         
@@ -116,6 +127,22 @@ public class BilliardController : PhysicsMaterialManager
     {
         bool isBallMoving = billiardBall.IsBallMoving();
 
+        // Check if ball just stopped moving to reset spin
+        if (ballWasMovingLastFrame && !isBallMoving)
+        {
+            // Ball just stopped, reset spin using the correct reference
+            if (spinButton != null)
+            {
+                spinButton.ResetSpin();
+                Debug.Log("[BilliardController] Ball stopped, spin reset");
+            }
+            else
+            {
+                Debug.LogWarning("[BilliardController] SpinButton reference is null, cannot reset spin");
+            }
+        }
+        ballWasMovingLastFrame = isBallMoving;
+
         if (isBallMoving)
         {
             aimLine.enabled = false;
@@ -134,8 +161,8 @@ public class BilliardController : PhysicsMaterialManager
             return;
         }
 
-        var spinBtn = FindFirstObjectByType<SpinButton>();
-        if (spinBtn != null && spinBtn.IsOpen)
+        // Use the assigned spinButton reference instead of FindFirstObjectByType
+        if (spinButton != null && spinButton.IsOpen)
         {
             aimLine.enabled = false;
             arrowIndicator.gameObject.SetActive(false);
@@ -252,7 +279,9 @@ public class BilliardController : PhysicsMaterialManager
     public void Shoot(Vector2 velocity)
     {
         Vector3 force = new Vector3(velocity.x, velocity.y, 0);
-        billiardBall.ApplyForce(force);
+        
+        // Use explicit spin reset for legacy calls
+        billiardBall.ApplyForceAndResetSpin(force);
 
         // Decrement shots
         if (GameManager.Instance != null)
