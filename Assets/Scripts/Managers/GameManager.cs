@@ -135,7 +135,9 @@ public class GameManager : MonoBehaviour
             winCheck = false;
 
             // Ask GameCanvasManager to hide the end scene UI if present
-            var canvasMgr = FindObjectOfType<GameCanvasManager>();
+
+            var canvasMgr = UnityEngine.Object.FindAnyObjectByType<GameCanvasManager>();
+
             if (canvasMgr != null)
                 canvasMgr.HideEndScene();
         }
@@ -259,7 +261,8 @@ public class GameManager : MonoBehaviour
     // GameCanvasManager is authoritative for the end UI.
     private void ToggleEndScenePanel(bool isWin)
     {
-        var canvasMgr = FindObjectOfType<GameCanvasManager>();
+        var canvasMgr = UnityEngine.Object.FindAnyObjectByType<GameCanvasManager>();
+
         if (canvasMgr != null)
         {
             canvasMgr.ShowEndScene(isWin);

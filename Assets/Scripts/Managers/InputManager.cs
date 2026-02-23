@@ -17,6 +17,9 @@ public class InputManager : MonoBehaviour
 
     private PlayerControls input;
 
+    // cached accelerometer handler so we can unsubscribe the exact delegate instance
+    private System.Action<InputAction.CallbackContext> accelerometerHandler;
+
     [Header("Input Area (optional)")]
     [Tooltip("If set, only touches/points inside this 2D collider will be treated as aiming input.")]
     [SerializeField] private Collider2D aimInputArea;
@@ -47,6 +50,9 @@ public class InputManager : MonoBehaviour
 
         input = new PlayerControls();
 
+        // create and cache accelerometer handler so removal succeeds
+        accelerometerHandler = ctx => OnPhoneTilt?.Invoke(ctx.ReadValue<Vector3>());
+
         cachedMainCamera = Camera.main;
 
         if (aimInputArea == null)
@@ -57,6 +63,9 @@ public class InputManager : MonoBehaviour
 
     private void OnEnable()
     {
+        if (input == null)
+            return;
+
         input.Enable();
 
         // subscribe to scene loaded so we can refresh camera / area refs after scene changes
@@ -66,22 +75,25 @@ public class InputManager : MonoBehaviour
         input.Gameplay.Touch.started += OnGameplayTouchStarted;
         input.Gameplay.Touch.canceled += OnGameplayTouchCanceled;
 
-        // tilt input
-        input.Gameplay.Accelerometer.performed += ctx => OnPhoneTilt?.Invoke(ctx.ReadValue<Vector3>());
+        // tilt input - use cached handler instance
+        input.Gameplay.Accelerometer.performed += new System.Action<InputAction.CallbackContext>(accelerometerHandler);
     }
 
     private void OnDisable()
     {
-        input.Disable();
-
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-
+        // Defensive: input may be null when this GameObject is destroyed in Awake (another instance existed)
         if (input != null)
         {
+            // disable input only if it was created
+            input.Disable();
+
+            // unsubscribe handlers (use the same handler instance for accelerometer)
             input.Gameplay.Touch.started -= OnGameplayTouchStarted;
             input.Gameplay.Touch.canceled -= OnGameplayTouchCanceled;
-            input.Gameplay.Accelerometer.performed -= ctx => OnPhoneTilt?.Invoke(ctx.ReadValue<Vector3>());
+            input.Gameplay.Accelerometer.performed -= new System.Action<InputAction.CallbackContext>(accelerometerHandler);
         }
+
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void OnDestroy()
